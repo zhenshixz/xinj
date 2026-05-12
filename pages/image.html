@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片生成 - 跨境多模态AI工具箱</title>
+    <meta name="description" content="AI 智能图片生成，支持多种模型与尺寸">
+    <link rel="preconnect" href="https://fonts.loli.net">
+    <link href="https://fonts.loli.net/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/new-app.css?v=20260311a">
+    <link rel="stylesheet" href="/static/css/custom-select.css?v=20260310a">
+    <link rel="stylesheet" href="/static/css/asset-picker.css?v=20260311a">
+    <script src="/static/js/shared-header.js?v=20260314a"></script>
+</head>
+
+<body>
+    <div id="app" v-cloak>
+        <!-- Toast -->
+        <div :class="['app-toast', toast.type, toast.show ? 'show' : '']">{{ toast.message }}</div>
+
+        <!-- Header (公共组件) -->
+        <app-header active-page="image" :user-credits="userCredits" @credits-updated="val => userCredits = val"
+            @user-loaded="onUserLoaded" @site-loaded="onSiteLoaded"></app-header>
+
+        <!-- Main Content -->
+        <main class="app-main" ref="mainArea">
+            <!-- Empty State -->
+            <div v-if="results.length === 0 && !isGenerating" class="empty-state">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p>暂无生成历史，开始你的创作吧！</p>
+            </div>
+
+            <!-- Chat Message List -->
+            <div class="chat-list">
+                <!-- Load More Indicator (top) -->
+                <div v-if="isLoadingMore" class="load-more-indicator">
+                    <div class="btn-spinner"></div>
+                    <span>加载更多历史...</span>
+                </div>
+                <div v-else-if="results.length > 0 && !hasMore" class="load-more-indicator no-more">
+                    <span>已加载全部历史记录</span>
+                </div>
+                <!-- Result Messages -->
+                <div v-for="item in results" :key="item.groupId" class="chat-message">
+                    <div class="chat-bubble">
+                        <!-- Prompt Row: ref image + prompt + meta -->
+                        <div class="chat-prompt-row">
+                            <div class="chat-ref-stack" :class="{'multi': item.originalImages.length > 1}">
+                                <img v-for="(oimg, oi) in item.originalImages" :key="oi" :src="oimg"
+                                    class="chat-ref-thumb" :style="{'--stack-idx': oi}" @click="previewMedia(oimg)"
+                                    alt="">
+                            </div>
+                            <span class="chat-prompt-text" @click="showTextDetail('提示词', item.prompt)">{{ item.prompt
+                                }}</span>
+                            <span class="chat-meta-tags">
+                                <span class="chat-tag">{{ item.model }}</span>
+                                <span v-if="item.creditsCost" class="chat-tag cost">-{{ item.creditsCost }}积分</span>
+                                <span class="chat-tag time">{{ formatTime(item.time) }}</span>
+                            </span>
+                        </div>
+
+                        <!-- Media Row (Images) -->
+                        <div v-if="item.images && item.images.length > 0" class="chat-images">
+                            <template v-for="(media, idx) in item.images" :key="idx">
+                                <div class="chat-image-item" @click="previewMedia(media)">
+                                    <img :src="media" alt="" @error="$event.target.style.display='none'">
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Text Result (when no images) -->
+                        <div v-else-if="item.resultText" class="chat-text-result"
+                            @click="showTextDetail('生成结果', item.resultText)">
+                            <p>{{ item.resultText }}</p>
+                            <div class="text-fade"></div>
+                        </div>
+
+                        <!-- Action Bar -->
+                        <div class="chat-actions">
+                            <button class="chat-action-btn" @click="reEdit(item)">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                重新编辑
+                            </button>
+                            <button class="chat-action-btn" @click="regenerate(item)" :disabled="isGenerating">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                再次生成
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading Message (Show at bottom) -->
+                <div v-if="isGenerating" class="chat-message loading-message">
+                    <div class="chat-bubble">
+                        <div class="chat-prompt-row">
+                            <div v-if="uploadPreviews.length" class="chat-ref-stack"
+                                :class="{'multi': uploadPreviews.length > 1}">
+                                <img v-for="(p, pi) in uploadPreviews" :key="pi" :src="p" class="chat-ref-thumb"
+                                    :style="{'--stack-idx': pi}" alt="">
+                            </div>
+                            <span class="chat-prompt-text">{{ generatingPrompt }}</span>
+                        </div>
+                        <div class="chat-loading">
+                            <div class="loading-indicator">
+                                <div class="loading-dot"></div>
+                                <div class="loading-dot"></div>
+                                <div class="loading-dot"></div>
+                            </div>
+                            <span class="loading-text">AI 正在生成中<span class="loading-ellipsis"></span></span>
+                        </div>
+                        <div class="loading-skeleton">
+                            <div v-for="n in imageCount" :key="n" class="skeleton-img"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- Bottom Control Panel -->
+        <div class="control-panel">
+            <div class="control-inner">
+                <!-- Prompt Row -->
+                <div class="prompt-row">
+                    <!-- Upload (Image mode: multi-image reference, per-image loading) -->
+                    <div class="upload-btn-wrap">
+                        <div v-if="refImages.length" class="upload-multi-preview">
+                            <div v-for="(img, pi) in refImages" :key="pi" class="upload-preview"
+                                :class="{ 'is-uploading': !img.url }">
+                                <img :src="img.preview" alt="">
+                                <!-- 上传完成：hover 显示移除按钮 -->
+                                <button v-if="img.url" class="remove-btn" @click="removeUpload(pi)">&times;</button>
+                                <!-- 上传中：显示 spinner 遮罩 -->
+                                <div v-else class="upload-loading-overlay">
+                                    <div class="upload-spinner"></div>
+                                </div>
+                            </div>
+                            <button class="upload-add-btn" @click="openAssetPicker" title="添加更多图片">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 4v16m8-8H4" />
+                                </svg>
+                            </button>
+                        </div>
+                        <button v-else class="upload-btn" @click="openAssetPicker">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span>图片</span>
+                        </button>
+                        <input type="file" ref="fileInput" @change="handleFileUpload" accept="image/*" multiple
+                            style="display:none">
+                    </div>
+
+                    <!-- Prompt -->
+                    <div class="prompt-input-wrap">
+                        <textarea class="prompt-textarea" v-model="prompt" placeholder="输入图片生成的提示词，例如：一个男人穿着这件衣服..."
+                            @keydown.enter.prevent="generateImage"></textarea>
+                    </div>
+                </div>
+
+                <!-- Toolbar Row -->
+                <div class="toolbar-row">
+                    <!-- Model Selector -->
+                    <div class="tool-select">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        <div class="custom-select" :class="{ open: modelDropOpen }" style="width:auto;min-width:120px;">
+                            <div class="custom-select-trigger" @click.stop="modelDropOpen = !modelDropOpen"
+                                style="height:34px;border-radius:8px;padding:0 10px;background:transparent;border:none;color:inherit;">
+                                <span class="custom-select-trigger-text">{{ currentModelObj ? currentModelObj.name :
+                                    '请选择' }}</span>
+                                <span class="custom-select-trigger-tags" v-if="currentModelObj">
+                                    <span v-if="currentModelObj.tags && currentModelObj.tags.includes('new')"
+                                        class="model-tag new">NEW</span>
+                                    <span v-if="currentModelObj.tags && currentModelObj.tags.includes('hot')"
+                                        class="model-tag hot">HOT</span>
+                                </span>
+                                <svg class="custom-select-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+                            <div v-if="modelDropOpen" class="custom-select-dropdown drop-up">
+                                <div v-for="m in imageModels" :key="m.id"
+                                    :class="['custom-select-option', currentModel === m.model_key ? 'selected' : '']"
+                                    @click.stop="currentModel = m.model_key; modelDropOpen = false">
+                                    <span class="custom-select-option-text">{{ m.name }}</span>
+                                    <span class="custom-select-option-tags">
+                                        <span v-if="m.tags && m.tags.includes('new')" class="model-tag new">NEW</span>
+                                        <span v-if="m.tags && m.tags.includes('hot')" class="model-tag hot">HOT</span>
+                                    </span>
+                                    <svg v-if="currentModel === m.model_key" class="custom-select-check" fill="none"
+                                        stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                            d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Settings Button + Popover -->
+                    <div class="settings-popover-wrap" @mouseenter="onSettingsEnter" @mouseleave="onSettingsLeave">
+                        <button class="tool-select">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                            </svg>
+                            {{ settingsLabel }}
+                        </button>
+
+                        <!-- Image Settings Popover -->
+                        <div v-if="showSettings" class="settings-popover">
+                            <div class="settings-section">
+                                <div class="settings-label">图像质量</div>
+                                <div class="settings-options">
+                                    <button v-for="q in imageQualities" :key="q"
+                                        :class="['settings-option', imageQuality===q ? 'active' : '']"
+                                        @click="imageQuality=q">{{ q === '2K' ? '高清 2K' : '超清 4K' }}</button>
+                                </div>
+                            </div>
+                            <div class="settings-section">
+                                <div class="settings-label">图片尺寸</div>
+                                <div class="settings-options">
+                                    <button v-for="r in imageRatios" :key="r"
+                                        :class="['settings-option', imageRatio===r ? 'active' : '']"
+                                        @click="imageRatio=r">{{ r }}</button>
+                                </div>
+                            </div>
+                            <div class="settings-section">
+                                <div class="settings-label">生成张数</div>
+                                <div class="settings-options">
+                                    <button v-for="n in maxImageCount" :key="n"
+                                        :class="['settings-option', imageCount===n ? 'active' : '']"
+                                        @click="imageCount=n">{{ n }}张</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Generate Button -->
+                    <button class="generate-btn" @click="generateImage"
+                        :disabled="isGenerating || isUploading || !prompt.trim() || uploadUrls.length === 0">
+                        <div v-if="isGenerating" class="btn-spinner"></div>
+                        <svg v-else fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <span v-if="isGenerating">生成中</span>
+                        <span v-else>生成</span>
+                        <span v-if="totalCost && !isGenerating" class="cost-badge">⚡{{ totalCost }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Media Preview Overlay -->
+        <div v-if="previewUrl" class="preview-overlay" @click="previewUrl = null">
+            <button class="preview-close" @click.stop="previewUrl = null">&times;</button>
+            <img :src="previewUrl" @click.stop alt="">
+        </div>
+
+
+        <!-- Text Detail Modal -->
+        <div v-if="textDetailModal && textDetailModal.show" class="credit-modal-overlay"
+            @click.self="textDetailModal.show = false">
+            <div class="credit-modal" style="max-width:600px">
+                <div class="credit-modal-header">
+                    <h3>{{ textDetailModal.title }}</h3>
+                    <button class="credit-modal-close" @click="textDetailModal.show = false">&times;</button>
+                </div>
+                <div class="credit-modal-body" style="max-height:60vh;overflow-y:auto">
+                    <p
+                        style="font-size:14px;line-height:1.8;color:var(--text-secondary);white-space:pre-wrap;word-break:break-word">
+                        {{ textDetailModal.content }}</p>
+                </div>
+            </div>
+        </div>
+        <!-- Asset Picker Modal -->
+        <div v-if="showAssetPicker" class="asset-picker-overlay" @click.self="closeAssetPicker">
+            <div class="asset-picker-modal">
+                <div class="asset-picker-header">
+                    <span class="asset-picker-title">选择要上传的图片</span>
+                    <button class="asset-picker-close" @click="closeAssetPicker">&times;</button>
+                </div>
+                <div class="asset-picker-tabs">
+                    <button class="asset-picker-tab" :class="{ active: pickerTab === 'local' }"
+                        @click="pickerTab = 'local'">本地上传</button>
+                    <button class="asset-picker-tab" :class="{ active: pickerTab === 'assets' }"
+                        @click="pickerTab = 'assets'; loadPickerAssets()">我的资产</button>
+                </div>
+                <div class="asset-picker-counter" v-if="pickerTab === 'assets'">
+                    已选 <span class="count">{{ pickerSelectedUrls.length }}</span> 张
+                </div>
+                <div class="asset-picker-body">
+                    <!-- Local Upload Tab -->
+                    <div v-if="pickerTab === 'local'">
+                        <div class="asset-picker-upload-zone" @click="pickerFileInput.click()"
+                            @dragover.prevent="pickerDragging = true" @dragleave="pickerDragging = false"
+                            @drop.prevent="handlePickerDrop($event)" :class="{ dragging: pickerDragging }">
+                            <div class="asset-picker-upload-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                            </div>
+                            <span class="asset-picker-upload-text">点击上传</span>
+                            <span class="asset-picker-upload-hint">或拖拽本地图片至此上传</span>
+                        </div>
+                        <input type="file" ref="pickerFileInput" @change="handlePickerLocalUpload" accept="image/*"
+                            multiple style="display:none">
+                    </div>
+                    <!-- Assets Tab -->
+                    <div v-if="pickerTab === 'assets'">
+                        <div v-if="pickerLoading" class="asset-picker-loading">
+                            <div class="asset-picker-spinner"></div>
+                        </div>
+                        <div v-else-if="pickerAssetGroups.length === 0" class="asset-picker-empty">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                            <span>暂无资产</span>
+                        </div>
+                        <div v-else>
+                            <div v-for="group in pickerAssetGroups" :key="group.date">
+                                <div class="asset-group-title">{{ group.label }}</div>
+                                <div class="asset-grid">
+                                    <div v-for="item in group.items" :key="item.id" class="asset-grid-item"
+                                        :class="{ selected: pickerSelectedUrls.includes(item.url) }"
+                                        @click="togglePickerAsset(item)">
+                                        <img :src="item.url" :alt="item.filename" loading="lazy">
+                                        <div class="asset-check">
+                                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                                    d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="asset-picker-footer" v-if="pickerTab === 'assets'">
+                    <button class="asset-picker-btn cancel" @click="closeAssetPicker">取消</button>
+                    <button class="asset-picker-btn confirm" @click="confirmPickerAssets"
+                        :disabled="pickerSelectedUrls.length === 0">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.2.47/vue.global.prod.min.js"></script>
+    <script src="/static/js/image-app.js?v=20260311a"></script>
+</body>
+
+</html>

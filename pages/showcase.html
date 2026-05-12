@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>星影共创 - AI视频创作灵感广场</title>
+    <meta name="description" content="浏览优秀AI生成作品，一键复刻创作脚本，替换产品图即可快速生成视频">
+    <link rel="preconnect" href="https://fonts.loli.net">
+    <link href="https://fonts.loli.net/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/new-app.css?v=20260314a">
+    <script src="/static/js/shared-header.js?v=20260314a"></script>
+    <style>
+        /* ========== 星影共创 — 高级画廊风格 ========== */
+
+        .showcase-page {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 32px 48px;
+            max-width: 1480px;
+            margin: 0 auto;
+            width: 100%;
+            position: relative;
+            /* 精致点阵装饰背景 */
+            background-image: radial-gradient(circle, rgba(0, 0, 0, 0.035) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        /* 顶部渐变彩色装饰条 */
+        .showcase-page::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 32px;
+            right: 32px;
+            height: 3px;
+            border-radius: 0 0 3px 3px;
+            background: linear-gradient(90deg, #f97316, #ec4899, #8b5cf6, #3b82f6);
+            opacity: 0.6;
+        }
+
+        /* ── 顶部筛选/统计栏 ── */
+        .showcase-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            padding: 0 4px;
+        }
+
+        .showcase-stats {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .stat-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .stat-icon.works {
+            background: rgba(249, 115, 22, 0.1);
+        }
+
+        .stat-icon.creators {
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .showcase-view-toggle {
+            display: flex;
+            gap: 4px;
+            padding: 3px;
+            background: var(--border-light, #f2f2f7);
+            border-radius: 10px;
+        }
+
+        .view-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .view-btn.active {
+            background: white;
+            color: var(--text);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+        }
+
+        .view-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* ── 瀑布流网格 ── */
+        .showcase-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .showcase-grid.compact {
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 14px;
+        }
+
+        /* ── 作品卡片 ── */
+        .showcase-card {
+            background: var(--card);
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+
+        .showcase-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(139, 92, 246, 0.15);
+            border-color: rgba(139, 92, 246, 0.25);
+        }
+
+        /* 悬停时左侧彩色强调线 */
+        .showcase-card::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(180deg, #f97316, #8b5cf6);
+            opacity: 0;
+            transition: opacity 0.3s;
+            border-radius: 16px 0 0 16px;
+            z-index: 3;
+        }
+
+        .showcase-card:hover::after {
+            opacity: 1;
+        }
+
+        .showcase-card-media {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            overflow: hidden;
+        }
+
+        .showcase-card-media img,
+        .showcase-card-media video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .showcase-card:hover .showcase-card-media img,
+        .showcase-card:hover .showcase-card-media video {
+            transform: scale(1.05);
+        }
+
+        /* 卡片悬浮叠加层 */
+        .card-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(0deg, rgba(0, 0, 0, 0.7) 0%, transparent 50%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.35s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 16px;
+        }
+
+        .showcase-card:hover .card-overlay {
+            opacity: 1;
+        }
+
+        .overlay-play {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .showcase-card:hover .overlay-play {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .overlay-play svg {
+            width: 22px;
+            height: 22px;
+            color: white;
+            margin-left: 2px;
+        }
+
+        /* 顶部徽章组 */
+        .card-badges {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            z-index: 2;
+        }
+
+        .media-badge {
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            color: white;
+            backdrop-filter: blur(12px);
+            letter-spacing: 0.3px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .media-badge.video {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.85), rgba(109, 40, 217, 0.85));
+        }
+
+        .media-badge.image {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.85), rgba(37, 99, 235, 0.85));
+        }
+
+        .script-badge {
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 700;
+            color: white;
+            background: linear-gradient(135deg, rgba(249, 115, 22, 0.9), rgba(234, 88, 12, 0.9));
+            backdrop-filter: blur(12px);
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .script-badge svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        /* 卡片内容 */
+        .showcase-card-body {
+            padding: 14px 16px 16px;
+        }
+
+        .showcase-card-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 12px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            line-height: 1.5;
+            min-height: 39px;
+        }
+
+        .showcase-card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-author {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .author-avatar {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .author-avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .author-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .author-name {
+            font-size: 12px;
+            color: var(--text);
+            font-weight: 600;
+            line-height: 1;
+        }
+
+        .card-model {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-top: 3px;
+            font-weight: 500;
+        }
+
+        .card-stats {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .card-stats svg {
+            width: 13px;
+            height: 13px;
+            opacity: 0.6;
+        }
+
+        /* ── 详情弹窗 ── */
+        .showcase-detail-modal {
+            background: var(--card);
+            border-radius: 20px;
+            width: 760px;
+            max-width: 95vw;
+            max-height: 92vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.18);
+            animation: modalSlideUp 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        @keyframes modalSlideUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .detail-media-wrap {
+            position: relative;
+            background: #000;
+            flex-shrink: 0;
+        }
+
+        .detail-media-wrap video,
+        .detail-media-wrap img {
+            width: 100%;
+            max-height: 50vh;
+            object-fit: contain;
+            display: block;
+        }
+
+        .detail-close-btn {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 5;
+        }
+
+        .detail-close-btn:hover {
+            background: rgba(0, 0, 0, 0.7);
+            transform: scale(1.08);
+        }
+
+        .detail-body {
+            padding: 24px 28px 28px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .detail-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 14px;
+            line-height: 1.55;
+        }
+
+        .detail-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .detail-author {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .detail-author .author-avatar {
+            width: 34px;
+            height: 34px;
+            font-size: 14px;
+        }
+
+        .detail-author .author-name {
+            font-size: 14px;
+        }
+
+        .detail-model-tag {
+            padding: 4px 12px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(109, 40, 217, 0.08));
+            color: #8b5cf6;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+
+        .detail-views {
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .detail-views svg {
+            width: 14px;
+            height: 14px;
+            opacity: 0.5;
+        }
+
+        .detail-prompt-section {
+            background: var(--border-light, #f5f5f7);
+            border-radius: 14px;
+            padding: 18px 20px;
+            margin-bottom: 20px;
+            border-left: 3px solid #8b5cf6;
+        }
+
+        .detail-prompt-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .detail-prompt-label svg {
+            width: 14px;
+            height: 14px;
+            opacity: 0.5;
+        }
+
+        .detail-prompt-text {
+            font-size: 13px;
+            line-height: 1.7;
+            color: var(--text);
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 140px;
+            overflow-y: auto;
+        }
+
+        .detail-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-replicate {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 13px 24px;
+            border: none;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #f97316, #ea580c);
+            color: white;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 20px rgba(249, 115, 22, 0.3);
+            letter-spacing: 0.3px;
+        }
+
+        .btn-replicate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(249, 115, 22, 0.45);
+        }
+
+        .btn-replicate:active {
+            transform: translateY(0);
+        }
+
+        .btn-replicate svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .btn-close-detail {
+            padding: 13px 24px;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-close-detail:hover {
+            background: var(--border-light);
+            border-color: var(--text-muted);
+        }
+
+        /* ── 空状态 ── */
+        .showcase-empty {
+            text-align: center;
+            padding: 100px 32px;
+            color: var(--text-muted);
+        }
+
+        .showcase-empty-visual {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(249, 115, 22, 0.08), rgba(139, 92, 246, 0.08));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+        }
+
+        .showcase-empty-text {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        .showcase-empty-hint {
+            font-size: 13px;
+            line-height: 1.6;
+            max-width: 360px;
+            margin: 0 auto;
+        }
+
+        /* ── 加载更多 ── */
+        .load-more-wrap {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .btn-load-more {
+            padding: 11px 36px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--card);
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+
+        .btn-load-more:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 4px 16px rgba(139, 92, 246, 0.1);
+        }
+
+        .loading-spinner-inline {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        /* ── 响应式 ── */
+        @media (max-width: 768px) {
+            .showcase-page {
+                padding: 16px;
+            }
+
+            .showcase-grid {
+                grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+                gap: 14px;
+            }
+
+            .showcase-toolbar {
+                flex-direction: column;
+                gap: 12px;
+                align-items: flex-start;
+            }
+
+            .detail-body {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app" style="display:flex;flex-direction:column;min-height:100vh">
+        <app-header active-page="showcase" :user-credits="userCredits" @credits-updated="val => userCredits = val"
+            @user-loaded="onUserLoaded"></app-header>
+
+        <main class="showcase-page">
+            <!-- 工具栏 -->
+            <div class="showcase-toolbar">
+                <div class="showcase-stats">
+                    <div class="stat-item">
+                        <div class="stat-icon works">🎬</div>
+                        <div>
+                            <div class="stat-value">{{ works.length }}</div>
+                            <div>共创作品</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 加载中 -->
+            <div v-if="loading && works.length === 0" style="text-align:center;padding:80px;color:var(--text-muted)">
+                <div class="loading-spinner-inline" style="width:28px;height:28px;border-width:3px"></div>
+                <span style="font-size:14px;margin-left:8px">加载创意灵感中...</span>
+            </div>
+
+            <!-- 空状态 -->
+            <div v-else-if="!loading && works.length === 0" class="showcase-empty">
+                <div class="showcase-empty-visual">🌟</div>
+                <div class="showcase-empty-text">暂时还没有作品</div>
+                <div class="showcase-empty-hint">在视频生成页用专业模式创作后，<br>可将得意作品分享到这里与大家交流</div>
+            </div>
+
+            <!-- 作品网格 -->
+            <div v-else class="showcase-grid">
+                <div v-for="work in works" :key="work.id" class="showcase-card" @click="viewDetail(work)">
+                    <div class="showcase-card-media">
+                        <video v-if="work.media_type === 'video'" :src="work.media_url + '#t=0.5'" preload="metadata"
+                            muted playsinline></video>
+                        <img v-else :src="work.media_url" alt="" loading="lazy">
+
+                        <!-- 悬浮叠加层 -->
+                        <div class="card-overlay">
+                            <div v-if="work.media_type === 'video'" class="overlay-play">
+                                <svg fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z" />
+                                </svg>
+                            </div>
+                        </div>
+
+                        <!-- 徽章 -->
+                        <div class="card-badges">
+                            <span :class="['media-badge', work.media_type]">
+                                {{ work.media_type === 'video' ? '🎬 视频' : '🖼️ 图片' }}
+                            </span>
+                            <span v-if="work.has_script" class="script-badge">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                        d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                                </svg>
+                                可复刻
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="showcase-card-body">
+                        <div class="showcase-card-title">{{ work.title || '未命名作品' }}</div>
+                        <div class="showcase-card-footer">
+                            <div class="card-author">
+                                <div class="author-avatar">
+                                    <img v-if="work.author.avatar" :src="work.author.avatar" alt="">
+                                    <span v-else>{{ (work.author.username || 'U')[0].toUpperCase() }}</span>
+                                </div>
+                                <div class="author-info">
+                                    <span class="author-name">{{ work.author.username }}</span>
+                                    <span class="card-model">{{ work.model }}</span>
+                                </div>
+                            </div>
+                            <div class="card-stats">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                {{ work.views_count || 0 }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 加载更多 -->
+            <div v-if="hasMore && works.length > 0" class="load-more-wrap">
+                <button class="btn-load-more" @click="loadMore" :disabled="loading">
+                    <span v-if="loading"><span class="loading-spinner-inline"></span>加载中...</span>
+                    <span v-else>加载更多作品</span>
+                </button>
+            </div>
+        </main>
+
+        <!-- 详情弹窗 -->
+        <div v-if="detailModal.show" class="credit-modal-overlay" @click.self="detailModal.show = false">
+            <div class="showcase-detail-modal">
+                <div class="detail-media-wrap">
+                    <video v-if="detailModal.data.media_type === 'video'" :src="detailModal.data.media_url" controls
+                        preload="metadata" style="width:100%;max-height:50vh;background:#000"></video>
+                    <img v-else :src="detailModal.data.media_url" alt=""
+                        style="width:100%;max-height:50vh;object-fit:contain;background:#000">
+                    <button class="detail-close-btn" @click="detailModal.show = false">&times;</button>
+                </div>
+                <div class="detail-body">
+                    <div class="detail-title">{{ detailModal.data.title }}</div>
+
+                    <div class="detail-meta">
+                        <div class="detail-author">
+                            <div class="author-avatar">
+                                <img v-if="detailModal.data.author?.avatar" :src="detailModal.data.author.avatar"
+                                    alt="">
+                                <span v-else>{{ ((detailModal.data.author?.username) || 'U')[0].toUpperCase() }}</span>
+                            </div>
+                            <div class="author-info">
+                                <span class="author-name">{{ detailModal.data.author?.username }}</span>
+                            </div>
+                        </div>
+                        <span class="detail-model-tag">{{ detailModal.data.model }}</span>
+                        <span class="detail-views">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            {{ detailModal.data.views_count }} 次浏览
+                        </span>
+                    </div>
+
+                    <div v-if="detailModal.data.prompt" class="detail-prompt-section">
+                        <div class="detail-prompt-label">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            创作提示词
+                        </div>
+                        <div class="detail-prompt-text">{{ detailModal.data.prompt }}</div>
+                    </div>
+
+                    <div class="detail-actions">
+                        <button class="btn-replicate"
+                            :style="(detailModal.data.has_script || detailModal.data.pro_mode_data) ? {} : { opacity: 0.45, cursor: 'not-allowed' }"
+                            @click="replicateScript">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                            </svg>
+                            脚本复刻 · 替换产品图即可生成
+                        </button>
+                        <button class="btn-close-detail" @click="detailModal.show = false">关闭</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div :class="['app-toast', toast.type, toast.show ? 'show' : '']">
+            {{ toast.message }}
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.2.47/vue.global.prod.min.js"></script>
+    <script src="/static/js/showcase-app.js?v=20260314d"></script>
+</body>
+
+</html>

@@ -1,0 +1,193 @@
+/* ===== Custom Select Dropdown (替代原生 <select>) =====
+ * 统一应用于 image.html / video.html / dev.html
+ * iOS 风格：毛玻璃弹窗、圆角、选中项蓝色高亮 + ✓ 勾选
+ */
+
+.custom-select {
+    position: relative;
+    width: 100%;
+}
+
+.custom-select-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: 42px;
+    padding: 0 14px;
+    background: var(--custom-select-bg, #f2f2f7);
+    border: 1.5px solid transparent;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--custom-select-color, #1c1c1e);
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+    gap: 8px;
+    font-family: inherit;
+}
+
+.custom-select-trigger:hover {
+    background: var(--custom-select-hover-bg, #e8e8ed);
+}
+
+.custom-select.open .custom-select-trigger {
+    border-color: #007aff;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
+    background: var(--custom-select-open-bg, #fff);
+}
+
+.custom-select-trigger-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.custom-select-trigger-tags {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.custom-select-arrow {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: var(--custom-select-arrow-color, #8e8e93);
+    transition: transform 0.2s;
+}
+
+.custom-select.open .custom-select-arrow {
+    transform: rotate(180deg);
+    color: #007aff;
+}
+
+.custom-select-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: var(--custom-select-dropdown-bg, rgba(255, 255, 255, 0.95));
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border: 0.5px solid rgba(0, 0, 0, 0.08);
+    border-radius: 14px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12),
+        0 2px 8px rgba(0, 0, 0, 0.06);
+    padding: 6px;
+    animation: customSelectSlideIn 0.18s ease-out;
+    max-height: 260px;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+/* 向上弹出（用于底部工具栏场景） */
+.custom-select-dropdown.drop-up {
+    top: auto;
+    bottom: calc(100% + 6px);
+    animation: customSelectSlideUp 0.18s ease-out;
+}
+
+@keyframes customSelectSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes customSelectSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(4px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.custom-select-option {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.12s;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--custom-select-option-color, #1c1c1e);
+}
+
+.custom-select-option:hover {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.custom-select-option.selected {
+    background: rgba(0, 122, 255, 0.08);
+    color: #007aff;
+}
+
+.custom-select-option-text {
+    flex: 1;
+}
+
+.custom-select-option-tags {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.model-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.model-tag.new {
+    background: rgba(0, 122, 255, 0.1);
+    color: #007aff;
+}
+
+.model-tag.hot {
+    background: rgba(255, 59, 48, 0.1);
+    color: #ff3b30;
+}
+
+.custom-select-check {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: #007aff;
+}
+
+/* ===== 下拉框内滚动条美化 ===== */
+.custom-select-dropdown::-webkit-scrollbar {
+    width: 4px;
+}
+
+.custom-select-dropdown::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-select-dropdown::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.12);
+    border-radius: 4px;
+}
+
+.custom-select-dropdown::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.2);
+}
