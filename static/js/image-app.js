@@ -3,10 +3,14 @@ const { createApp, ref, computed, onMounted, onUnmounted, watch, nextTick } = Vu
 
 const app = createApp({
     setup() {
-        // Auth check
-        const token = localStorage.getItem('token');
+        // Auth check — demo mode (no login required)
+        let token = localStorage.getItem('token');
+        if (!token) {
+            token = 'demo';
+            localStorage.setItem('token', token);
+            localStorage.setItem('user', JSON.stringify({username:'Demo',credits:99999}));
+        }
         const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-        if (!token) { window.location.href='/pages/login.html'; return {}; }
         const authHeaders = { 'Authorization': 'Bearer ' + token };
 
         // Site config
@@ -121,7 +125,7 @@ const app = createApp({
                 try {
                     const res = await fetch('/api/upload', { method: 'POST', body: fd, headers: authHeaders });
                     const json = await res.json();
-                    if (json.code === 401) { localStorage.clear(); window.location.href='/pages/login.html'; return; }
+                    if (json.code === 401) { console.warn('Auth expired'); return; }
                     if (json.code === 200) {
                         proxyRef.url = json.data.urls?.[0] || json.data.url || '';
                     } else {
@@ -223,7 +227,7 @@ const app = createApp({
                 clearTimeout(timeoutId);
 
                 const json = await res.json();
-                if (json.code === 401) { localStorage.clear(); window.location.href='/pages/login.html'; return; }
+                if (json.code === 401) { console.warn('Auth expired'); return; }
                 if (json.code === 200) {
                     showToast(`生成成功！消耗 ${json.data.credits_cost} 积分`, 'success');
                     userCredits.value = json.data.credits_balance;
@@ -277,7 +281,7 @@ const app = createApp({
             try {
                 const res = await fetch('/api/history?page=1&page_size=10&type=image', { headers: authHeaders });
                 const json = await res.json();
-                if (json.code === 401) { localStorage.clear(); window.location.href='/pages/login.html'; return; }
+                if (json.code === 401) { console.warn('Auth expired'); return; }
                 if (json.code === 200 && json.data) {
                     results.value = json.data.map(mapHistoryItem).reverse();
                     hasMore.value = json.has_more || false;

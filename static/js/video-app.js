@@ -3,10 +3,14 @@ const { createApp, ref, computed, onMounted, onUnmounted, watch, nextTick } = Vu
 
 const app = createApp({
     setup() {
-        // Auth check
-        const token = localStorage.getItem('token');
+        // Auth check — demo mode (no login required)
+        let token = localStorage.getItem('token');
+        if (!token) {
+            token = 'demo';
+            localStorage.setItem('token', token);
+            localStorage.setItem('user', JSON.stringify({username:'Demo',credits:99999}));
+        }
         const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-        if (!token) { window.location.href='/pages/login.html'; return {}; }
         const authHeaders = { 'Authorization': 'Bearer ' + token };
 
         // Site config
@@ -321,7 +325,7 @@ const app = createApp({
                 clearTimeout(timeoutId);
 
                 const json = await res.json();
-                if (json.code === 401) { localStorage.clear(); window.location.href='/pages/login.html'; return; }
+                if (json.code === 401) { console.warn('Auth expired'); return; }
                 if (json.code === 200 && json.data) {
                     const data = json.data;
 
@@ -440,7 +444,7 @@ const app = createApp({
                 clearTimeout(timeoutId);
 
                 const json = await res.json();
-                if (json.code === 401) { localStorage.clear(); window.location.href='/pages/login.html'; return; }
+                if (json.code === 401) { console.warn('Auth expired'); return; }
                 if (json.code === 200 && json.data && json.data.shots) {
                     const aiShots = json.data.shots;
 
@@ -585,7 +589,7 @@ const app = createApp({
                 clearTimeout(timeoutId);
 
                 const json = await res.json();
-                if (json.code === 401) { localStorage.clear(); window.location.href='/pages/login.html'; return; }
+                if (json.code === 401) { console.warn('Auth expired'); return; }
                 if (json.code === 200 && json.data && json.data.shot) {
                     const s = json.data.shot;
 
@@ -920,7 +924,7 @@ const app = createApp({
             try {
                 const res = await fetch('/api/upload', { method: 'POST', body: fd, headers: authHeaders });
                 const json = await res.json();
-                if (json.code === 401) { localStorage.clear(); window.location.href='/pages/login.html'; return; }
+                if (json.code === 401) { console.warn('Auth expired'); return; }
                 if (json.code === 200) {
                     const uploadedUrl = json.data.urls?.[0] || json.data.url || '';
                     if (!uploadedUrl) throw new Error('上传返回无效URL');
@@ -1008,7 +1012,7 @@ const app = createApp({
                 try {
                     const res = await fetch('/api/upload', { method: 'POST', body: fd, headers: authHeaders });
                     const json = await res.json();
-                    if (json.code === 401) { localStorage.clear(); window.location.href='/pages/login.html'; return; }
+                    if (json.code === 401) { console.warn('Auth expired'); return; }
                     if (json.code === 200) {
                         proxyRef.url = json.data.urls?.[0] || json.data.url || '';
                     } else {
@@ -1548,7 +1552,7 @@ const app = createApp({
                 clearTimeout(timeoutId);
 
                 const json = await res.json();
-                if (json.code === 401) { localStorage.clear(); window.location.href='/pages/login.html'; return; }
+                if (json.code === 401) { console.warn('Auth expired'); return; }
                 if (json.code === 200) {
                     // Extract text result
                     const text = json.data.result_text || json.data.text || '';
@@ -1782,7 +1786,7 @@ const app = createApp({
                 clearTimeout(timeoutId);
 
                 const json = await res.json();
-                if (json.code === 401) { localStorage.clear(); window.location.href='/pages/login.html'; return; }
+                if (json.code === 401) { console.warn('Auth expired'); return; }
                 if (json.code === 200) {
                     userCredits.value = json.data.credits_balance;
 
@@ -1865,7 +1869,7 @@ const app = createApp({
                 try {
                     const res = await fetch('/api/task/poll', { headers: authHeaders });
                     const json = await res.json();
-                    if (json.code === 401) { localStorage.clear(); window.location.href='/pages/login.html'; return; }
+                    if (json.code === 401) { console.warn('Auth expired'); return; }
                     if (json.code === 200) {
                         const tasks = json.data || [];
                         let hasChanges = false;
@@ -1985,7 +1989,7 @@ const app = createApp({
             try {
                 const res = await fetch('/api/history?page=1&page_size=20&type=video', { headers: authHeaders });
                 const json = await res.json();
-                if (json.code === 401) { localStorage.clear(); window.location.href='/pages/login.html'; return; }
+                if (json.code === 401) { console.warn('Auth expired'); return; }
                 if (json.code === 200 && json.data) {
                     historyList.value = json.data.map(mapHistoryItem);
                 }
@@ -2237,7 +2241,7 @@ const app = createApp({
             try {
                 const res = await fetch('/api/task/poll', { headers: authHeaders });
                 const json = await res.json();
-                if (json.code === 401) { localStorage.clear(); window.location.href='/pages/login.html'; return; }
+                if (json.code === 401) { console.warn('Auth expired'); return; }
                 if (json.code === 200) {
                     const tasks = json.data || [];
                     let hasChanges = false;
