@@ -78,9 +78,9 @@
 
         .feature-cards {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 20px;
-            max-width: 860px;
+            max-width: 1100px;
             margin: 0 auto;
         }
 
@@ -157,6 +157,11 @@
             background: linear-gradient(135deg, #10b981, #06b6d4);
             box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
         }
+
+        .hero-content { max-width: 1140px; }
+        .selection-card .feature-card-icon { background: linear-gradient(135deg, #7c3aed, #a855f7); box-shadow: 0 6px 20px rgba(124, 58, 237, 0.25); }
+        .selection-card:hover .feature-card-arrow { background: #7c3aed; color: white; }
+        .selection-card::before { background: linear-gradient(135deg, rgba(124, 58, 237, .05), rgba(168, 85, 247, .05)); }
 
         .feature-card-icon svg {
             width: 28px;
@@ -252,7 +257,7 @@
             }
         }
 
-        @media (min-width: 769px) and (max-width: 960px) {
+        @media (min-width: 769px) and (max-width: 1180px) {
             .feature-cards {
                 grid-template-columns: repeat(2, 1fr);
             }
@@ -273,7 +278,7 @@
                     </svg>
                 </div>
                 <h1 class="hero-title">星骏跨境多模态AI工具箱</h1>
-                <p class="hero-subtitle">集成先进 AI 模型，一站式完成图片生成、跨境视频制作与智能退款分析</p>
+                <p class="hero-subtitle">图片生成、跨境视频制作、退款分析与 AI 选品，一站式开启跨境创作</p>
 
                 <div class="feature-cards">
                     <a class="feature-card image-card" href="/pages/image.html">
@@ -310,7 +315,7 @@
                         </div>
                     </a>
 
-                    <a class="feature-card refund-card" href="http://refund.xjcerp.com/" target="_blank">
+                    <a class="feature-card refund-card" href="/refund/">
                         <div class="feature-card-icon">
                             <!-- 退款/数据分析图标 -->
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -319,13 +324,21 @@
                             </svg>
                         </div>
                         <div class="feature-card-title">退款分析</div>
-                        <div class="feature-card-desc">AI 驱动的退款原因聚类分析，智能诊断退款趋势并输出优化建议</div>
+                        <div class="feature-card-desc">退款看板与深度原因分析，按商品、颜色和部位探索退款问题</div>
                         <div class="feature-card-arrow">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 5l7 7-7 7" />
                             </svg>
                         </div>
+                    </a>
+                    <a class="feature-card selection-card" href="/selection/">
+                        <div class="feature-card-icon">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-5-5m2-6a7 7 0 11-14 0 7 7 0 0114 0zM11 7v6m-3-3h6" /></svg>
+                        </div>
+                        <div class="feature-card-title">AI 选品</div>
+                        <div class="feature-card-desc">从商品收藏到竞品报告与改款对比，体验历史真实数据的完整选品流程</div>
+                        <div class="feature-card-arrow"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg></div>
                     </a>
                 </div>
 

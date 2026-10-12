@@ -1,0 +1,11 @@
+body { background: #f6f8fc; }
+.strategy-grid > article:only-child { grid-column: 1 / -1; }
+.demo-banner { max-width: 1440px; margin: 20px auto 0; padding: 18px 22px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; color: var(--ink); }
+.demo-banner > div { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
+.demo-banner a { color: var(--violet); font-size: 13px; text-decoration: none; }
+.demo-banner strong { font-size: 14px; }
+.demo-banner p, .demo-banner span { font-size: 12px; color: var(--muted); line-height: 1.7; }
+.demo-banner p { margin: 10px 0; }
+.demo-banner a:hover { text-decoration: underline; }
+@media (max-width: 1500px) { .demo-banner { margin-left: 24px; margin-right: 24px; } }
+@media (max-width: 720px) { .demo-banner { margin-left: 12px; margin-right: 12px; padding: 14px; } }

@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>退货分析 — EKCW2521027</title>
+<script src="/static/js/chart-4.4.0.min.js"></script>
+<style>
+:root{
+  --sidebar:220px; --topbar:54px;
+  --bg:#f0f2f7; --card:#fff; --border:#e5e7eb;
+  --primary:#2563eb; --danger:#ef4444; --warn:#f59e0b;
+  --ok:#10b981; --purple:#8b5cf6;
+  --dark:#111827; --gray:#6b7280; --gray2:#9ca3af;
+  --radius:12px; --shadow:0 1px 3px rgba(0,0,0,.07),0 4px 14px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--dark);font-size:14px;overflow-x:hidden}
+
+/* ── TOPBAR ── */
+.topbar{position:fixed;top:0;left:0;right:0;height:var(--topbar);background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;z-index:100;gap:12px}
+.action-btn{font-size:12px;font-weight:700;background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;padding:5px 14px;border-radius:20px;cursor:pointer;transition:background .15s}
+.action-btn:hover{background:#d1fae5}
+.topbar-sku{font-size:11px;font-weight:700;background:#eff6ff;color:var(--primary);padding:3px 10px;border-radius:10px}
+.topbar-title{font-size:15px;font-weight:700;color:var(--dark)}
+.topbar-meta{font-size:11px;color:var(--gray);margin-left:4px}
+.topbar-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.topbar-select{font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--dark);cursor:pointer;outline:none;transition:border-color .2s,box-shadow .2s;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7280'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px}
+.topbar-select:hover{border-color:var(--primary)}
+.topbar-select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.query-btn{font-size:12px;font-weight:700;background:var(--primary);color:#fff;border:none;padding:6px 16px;border-radius:8px;cursor:pointer;transition:all .2s;box-shadow:0 2px 4px rgba(37,99,235,.2)}
+.query-btn:hover{background:#1d4ed8;box-shadow:0 4px 8px rgba(37,99,235,.3);transform:translateY(-1px)}
+.query-btn:active{transform:translateY(0);box-shadow:0 2px 4px rgba(37,99,235,.2)}
+.filter-group{display:flex;align-items:center;gap:6px}
+.filter-label{font-size:11px;color:var(--gray);font-weight:600;white-space:nowrap}
+.filter-sep{width:1px;height:22px;background:var(--border);margin:0 4px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
+
+/* ── KPI NAV ── */
+.kpi-nav{position:sticky;top:var(--topbar);z-index:80;background:var(--bg);padding:16px 24px 0;margin-bottom:0}
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;padding-bottom:2px}
+.kpi{background:var(--card);border-radius:var(--radius);padding:16px 18px 22px;box-shadow:var(--shadow);border-left:4px solid var(--border);position:relative;overflow:hidden;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
+.kpi::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:transparent;transition:background .2s}
+.kpi.k-p::after{background:transparent} .kpi.k-d::after{background:transparent} .kpi.k-w::after{background:transparent} .kpi.k-g::after{background:transparent}
+.kpi.kpi-active.k-p::after{background:var(--primary)}
+.kpi.kpi-active.k-d::after{background:var(--danger)}
+.kpi.kpi-active.k-w::after{background:var(--warn)}
+.kpi.kpi-active.k-g::after{background:var(--ok)}
+.kpi.kpi-active{box-shadow:var(--shadow),0 4px 0 0 transparent}
+/* Enhanced clickable effect for link KPI cards */
+.kpi.kpi-link{cursor:pointer;position:relative;border:1px solid transparent;transition:all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)}
+.kpi.kpi-link::before{content:'';position:absolute;inset:0;border-radius:var(--radius);opacity:0;transition:opacity .25s ease;pointer-events:none;background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(37,99,235,.02))}
+.kpi.kpi-link:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 12px 30px rgba(0,0,0,.15),0 4px 8px rgba(0,0,0,.08);border-color:var(--primary);z-index:10}
+.kpi.kpi-link:hover::before{opacity:1}
+.kpi.kpi-link:active{transform:translateY(-1px) scale(1);box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.kpi.kpi-link .kpi-drill{opacity:.5;transition:all .3s ease;background:var(--bg);padding:2px 8px;border-radius:10px}
+.kpi.kpi-link:hover .kpi-drill{opacity:1;transform:translateX(0);background:var(--primary);color:#fff}
+/* Non-clickable KPI cards */
+.kpi.kpi-static{cursor:default;opacity:.85}
+.kpi.kpi-static:hover{transform:none;box-shadow:var(--shadow)}
+.kpi.kpi-static .kpi-drill{display:none}
+
+/* ── MAIN ── */
+.main{margin-top:var(--topbar);min-height:calc(100vh - var(--topbar))}
+.tab-content{padding:16px 24px 24px}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+
+/* ── LAYOUT HELPERS ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.g3{display:grid;grid-template-columns:1.2fr 1fr .8fr;gap:16px;margin-bottom:16px}
+.g21{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px}
+.g12{display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:16px}
+.g-full{margin-bottom:16px}
+
+/* ── CARDS ── */
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow)}
+.ch{padding:14px 18px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.ct{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px}
+.ct .dot{width:8px;height:8px;border-radius:50%}
+.cs{font-size:11px;color:var(--gray);margin-top:2px}
+.cb{padding:16px 18px}
+.c-badge{font-size:11px;padding:3px 9px;border-radius:10px;font-weight:600;white-space:nowrap}
+.cb-r{background:#fef2f2;color:#b91c1c}
+.cb-y{background:#fffbeb;color:#92400e}
+.cb-b{background:#eff6ff;color:#1d4ed8}
+.cb-g{background:#ecfdf5;color:#065f46}
+
+/* ── KPI CARDS ── */
+.kpi.k-p{border-left-color:var(--primary)}
+.kpi.k-d{border-left-color:var(--danger)}
+.kpi.k-w{border-left-color:var(--warn)}
+.kpi.k-g{border-left-color:var(--ok)}
+.kpi-lbl{font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px}
+.kpi-val{font-size:26px;font-weight:800;line-height:1;margin-bottom:5px}
+.kpi-val.c-p{color:var(--primary)} .kpi-val.c-d{color:var(--danger)} .kpi-val.c-w{color:var(--warn)} .kpi-val.c-g{color:var(--ok)}
+.kpi-sub{font-size:11px;color:var(--gray)}
+.kpi-ico{position:absolute;right:14px;top:14px;font-size:22px;opacity:.1}
+.kpi-drill{position:absolute;bottom:8px;right:12px;font-size:10px;font-weight:700;color:var(--gray);opacity:.35;display:flex;align-items:center;gap:3px;transition:opacity .2s,transform .2s}
+.kpi.kpi-active .kpi-drill{opacity:1}
+
+/* ── SECTION TITLES ── */
+.sec-title{font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.7px;margin-bottom:14px;padding-left:10px;border-left:3px solid var(--primary)}
+
+/* ── ALERT BOX ── */
+.alert-box{border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;display:flex;align-items:flex-start;gap:10px}
+.alert-box.danger{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c}
+.alert-box.warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
+.alert-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.alert-list{margin-top:6px;display:flex;flex-direction:column;gap:5px}
+.alert-list li{list-style:none;padding-left:14px;position:relative}
+.alert-list li::before{content:'→';position:absolute;left:0;font-weight:700}
+
+/* ── DRESS DIAGRAM ── */
+.dress-wrap{display:flex;gap:24px;align-items:flex-start}
+.part-legend{display:flex;flex-direction:column;gap:8px;flex:1}
+.part-item{display:flex;align-items:flex-start;gap:9px;padding:9px 12px;border-radius:8px;border:1.5px solid transparent;transition:all .15s;cursor:default}
+.part-item:hover{border-color:var(--border);background:#fafafa}
+.part-item.sev3{border-left:3px solid var(--danger)}
+.part-item.sev2{border-left:3px solid var(--warn)}
+.part-item.sev1{border-left:3px solid var(--primary)}
+.p-rank{width:20px;height:20px;border-radius:50%;font-size:10px;font-weight:800;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.p-info .p-name{font-size:12px;font-weight:700}
+.p-info .p-cnt{font-size:11px;color:var(--gray);margin-top:2px}
+.p-bar{display:flex;align-items:center;gap:6px;margin-top:5px}
+.p-bar-bg{flex:1;height:5px;background:#f3f4f6;border-radius:3px}
+.p-bar-fill{height:5px;border-radius:3px}
+.p-action{font-size:11px;color:var(--ok);font-weight:600;margin-top:4px}
+
+/* ── MATRIX ── */
+.mx-table{width:100%;border-collapse:collapse}
+.mx-table th{font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;padding:9px 10px;text-align:center;border-bottom:2px solid var(--border);background:#fafafa;white-space:nowrap}
+.mx-table th:first-child{text-align:left;width:120px}
+.mx-table td{padding:0;border:1px solid #f3f4f6}
+.mx-table td.lbl{font-size:11px;font-weight:600;padding:9px 10px;background:#fafafa;white-space:nowrap}
+.mx-cell{display:block;width:100%;padding:9px 6px;text-align:center;font-size:12px;font-weight:700;transition:transform .12s;cursor:default}
+.mx-cell:hover{transform:scale(1.08)}
+.mx-cell .mx-sub{font-size:8px;display:block;margin-top:1px;opacity:.75}
+
+/* ── MEASURE TABLE ── */
+.ms-table{width:100%;border-collapse:collapse}
+.ms-table th{font-size:10px;font-weight:700;color:var(--gray);padding:9px 12px;text-align:left;border-bottom:2px solid var(--border);background:#fafafa;white-space:nowrap}
+.ms-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;vertical-align:top}
+.ms-table tr:last-child td{border-bottom:none}
+.ms-table tr:hover td{background:#fafafa}
+.ms-danger{font-weight:700;color:var(--danger)}
+.ms-ok{font-weight:700;color:var(--ok)}
+.ms-note{font-size:10px;color:var(--gray);margin-top:2px}
+.delta{display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:#fef2f2;color:#991b1b;margin-left:2px}
+.ptag{display:inline-block;font-size:10px;font-weight:800;padding:2px 7px;border-radius:4px;margin-bottom:4px}
+.pt-h{background:#fef2f2;color:#b91c1c}
+.pt-m{background:#fffbeb;color:#92400e}
+.pt-l{background:#eff6ff;color:#1d4ed8}
+
+/* ── FABRIC CARDS ── */
+.fabric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.fcard{border-radius:10px;padding:14px 16px;border:1.5px solid var(--border);position:relative;overflow:hidden}
+.fcard-rank{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.fcard-val{font-size:24px;font-weight:800;line-height:1;margin-bottom:4px}
+.fcard-label{font-size:12px;font-weight:700;margin-bottom:4px}
+.fcard-sub{font-size:11px;color:var(--gray);line-height:1.5}
+.fcard-action{font-size:11px;font-weight:600;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.fcard-ico{position:absolute;right:12px;top:12px;font-size:28px;opacity:.1}
+.fcard.thin{border-color:#fecaca;background:#fff9f9} .fcard.thin .fcard-val{color:#b91c1c} .fcard.thin .fcard-action{color:#b91c1c}
+.fcard.cheap{border-color:#fde68a;background:#fffdf5} .fcard.cheap .fcard-val{color:#92400e} .fcard.cheap .fcard-action{color:#92400e}
+.fcard.heavy{border-color:#ddd6fe;background:#faf8ff} .fcard.heavy .fcard-val{color:#6d28d9} .fcard.heavy .fcard-action{color:#6d28d9}
+.fcard.pic{border-color:#bfdbfe;background:#f0f6ff} .fcard.pic .fcard-val{color:#1d4ed8} .fcard.pic .fcard-action{color:#1d4ed8}
+.fcard.synth{border-color:#d1fae5;background:#f0fdf9} .fcard.synth .fcard-val{color:#065f46} .fcard.synth .fcard-action{color:#065f46}
+
+/* ── QUOTE CARDS ── */
+.quote-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.qcard{background:#f9fafb;border-radius:8px;padding:11px 13px}
+.qtag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.qtext{font-size:12px;color:#374151;line-height:1.5;font-style:italic}
+.qsize{font-size:10px;color:var(--gray);margin-top:5px;font-weight:600}
+
+/* ── PRIORITY TABLE ── */
+.pr-table{width:100%;border-collapse:collapse}
+.pr-table th{font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;padding:10px 14px;text-align:left;border-bottom:2px solid var(--border);background:#fafafa}
+.pr-table td{padding:12px 14px;border-bottom:1px solid var(--border);font-size:12px;vertical-align:middle}
+.pr-table tr:last-child td{border-bottom:none}
+.pr-table tr:hover td{background:#fafafa}
+.p-badge{display:inline-block;font-size:10px;font-weight:800;padding:3px 8px;border-radius:4px}
+.p0{background:#fef2f2;color:#b91c1c} .p1{background:#fffbeb;color:#92400e} .p2{background:#eff6ff;color:#1d4ed8}
+.impact-row{display:flex;align-items:center;gap:7px}
+.ib{flex:1;height:6px;background:#f3f4f6;border-radius:3px;overflow:hidden}
+.ib-fill{height:6px;border-radius:3px}
+.effort-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}
+.category-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;display:inline-block}
+.ct-size{background:#fef2f2;color:#b91c1c} .ct-fabric{background:#fffbeb;color:#92400e} .ct-content{background:#eff6ff;color:#1d4ed8}
+
+/* ── COLOR FILTER BUTTONS ── */
+.color-btn{font-size:11px;padding:4px 10px;border-radius:14px;border:1.5px solid var(--border);background:var(--card);cursor:pointer;color:var(--gray);font-weight:500;transition:all .15s;white-space:nowrap}
+.color-btn:hover{border-color:var(--cc,var(--primary));color:var(--dark)}
+.color-btn.active{background:var(--cc,var(--primary));border-color:var(--cc,var(--primary));color:#fff;font-weight:700}
+.color-btn[data-color="all"].active{background:var(--primary);border-color:var(--primary)}
+/* sparse cell style */
+.mx-cell.sparse{background:repeating-linear-gradient(45deg,#e5e7eb,#e5e7eb 2px,#f9fafb 2px,#f9fafb 6px) !important;color:#9ca3af !important}
+
+/* ── LEGEND ── */
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--gray)}
+.leg-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+
+/* ── PRD MODAL & BTN ── */
+.doc-btn {position:fixed;bottom:24px;right:24px;background:var(--primary);color:#fff;border:none;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:600;box-shadow:0 4px 12px rgba(37,99,235,.3);cursor:pointer;z-index:999;transition:all .2s;display:flex;align-items:center;gap:6px}
+.doc-btn:hover {transform:translateY(-2px) scale(1.05);box-shadow:0 6px 16px rgba(37,99,235,.4);background:#1d4ed8}
+.doc-btn:active {transform:translateY(1px) scale(0.98);box-shadow:0 2px 8px rgba(37,99,235,.2)}
+.doc-overlay {position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;backdrop-filter:blur(4px);opacity:0;transition:opacity .3s}
+.doc-modal {position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.95);background:#fff;border-radius:16px;width:95%;max-width:1000px;max-height:92vh;z-index:1001;display:none;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,.2);opacity:0;transition:all .3s cubic-bezier(0.25, 0.8, 0.25, 1)}
+.doc-modal.show, .doc-overlay.show {display:flex;opacity:1}
+.doc-modal.show {transform:translate(-50%,-50%) scale(1)}
+.doc-header {padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border-radius:16px 16px 0 0}
+.doc-title {font-size:20px;font-weight:700;color:var(--dark);margin:0;display:flex;align-items:center;gap:8px}
+.doc-close {background:none;border:none;font-size:24px;color:var(--gray);cursor:pointer;transition:color .2s;padding:0;line-height:1}
+.doc-close:hover {color:var(--danger)}
+.doc-content {padding:24px 32px;overflow-y:auto;font-size:15px;line-height:1.7;color:#334155}
+.doc-content h3 {font-size:18px;color:var(--dark);margin:24px 0 12px;padding-bottom:8px;border-bottom:2px solid #e2e8f0;display:flex;align-items:center;gap:8px}
+.doc-content h3:first-child {margin-top:0}
+.doc-content h4 {font-size:16px;color:var(--dark);margin:18px 0 8px;font-weight:700}
+.doc-content ul {margin:0 0 16px;padding-left:24px;list-style-type:disc}
+.doc-content li {margin-bottom:8px}
+.doc-content p {margin:0 0 12px}
+.doc-highlight {background:#eff6ff;color:var(--primary);padding:2px 6px;border-radius:4px;font-weight:600;font-size:13px}
+</style>
+<link rel="stylesheet" href="/static/css/tool-nav.css"></head>
+<body class="refund-deep"><nav class="xinj-tool-nav" aria-label="退款工具导航"><a href="/">← 星骏 AI 工具箱</a><div><a href="/refund/" >退款看板</a><a href="/refund/deep/" aria-current="page">深度分析</a><a href="/selection/">AI 选品</a></div><small>示例数据演示</small></nav><script src="/static/js/tool-nav.js"></script>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <span class="topbar-sku">EKCW2521027</span>
+  <span class="topbar-title">退货原因深度分析</span>
+  <span class="topbar-meta">服装 · 8色 × 6码</span>
+  <div class="topbar-right">
+    <div class="filter-group">
+      <span class="filter-label">月份</span>
+      <input type="month" class="topbar-select" id="monthStart" value="2026-03" style="padding-right:8px;background-image:none">
+      <span style="font-size:12px;color:var(--gray)">—</span>
+      <input type="month" class="topbar-select" id="monthEnd" value="2026-05" style="padding-right:8px;background-image:none">
+    </div>
+    <div class="filter-sep"></div>
+    <div class="filter-group">
+      <span class="filter-label">站点</span>
+      <select class="topbar-select" id="siteFilter">
+        <option value="all" selected>所有站点</option>
+        <option value="US">🇺🇸 美国站 (US)</option>
+        <option value="UK">🇬🇧 英国站 (UK)</option>
+        <option value="DE">🇩🇪 德国站 (DE)</option>
+        <option value="FR">🇫🇷 法国站 (FR)</option>
+        <option value="JP">🇯🇵 日本站 (JP)</option>
+        <option value="CA">🇨🇦 加拿大站 (CA)</option>
+        <option value="IT">🇮🇹 意大利站 (IT)</option>
+        <option value="ES">🇪🇸 西班牙站 (ES)</option>
+      </select>
+    </div>
+    <div class="filter-sep"></div>
+    <button class="query-btn">查询</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+<!-- ═══ GLOBAL KPI NAV (always visible) ═══ -->
+<div class="kpi-nav">
+  <div class="kpi-row">
+    <div class="kpi k-p kpi-link kpi-active" id="kpi-overview" onclick="navTo('overview')">
+      <div class="kpi-lbl">总退货量</div><div class="kpi-val c-p">2,271</div>
+      <div class="kpi-sub">件 · 单SKU全周期</div><div class="kpi-ico">📦</div>
+      <div class="kpi-drill">退货总览 →</div>
+    </div>
+    <div class="kpi k-d kpi-link" id="kpi-size" onclick="navTo('size')">
+      <div class="kpi-lbl">尺码问题</div><div class="kpi-val c-d">39.0%</div>
+      <div class="kpi-sub">偏大 29.4% + 偏小 9.6%</div><div class="kpi-ico">📏</div>
+      <div class="kpi-drill">尺码诊断 →</div>
+    </div>
+    <div class="kpi k-w kpi-link" id="kpi-fabric" onclick="navTo('fabric')">
+      <div class="kpi-lbl">面料/风格</div><div class="kpi-val c-w">14.1%</div>
+      <div class="kpi-sub">面料不符 + 风格不满</div><div class="kpi-ico">🧵</div>
+      <div class="kpi-drill">面料诊断 →</div>
+    </div>
+    <div class="kpi k-w kpi-static" id="kpi-nad">
+      <div class="kpi-lbl">图文不符</div><div class="kpi-val c-w">14.7%</div>
+      <div class="kpi-sub">NOT_AS_DESCRIBED</div><div class="kpi-ico">🖼</div>
+    </div>
+    <div class="kpi k-g kpi-static">
+      <div class="kpi-lbl">品质问题</div><div class="kpi-val c-g">3.3%</div>
+      <div class="kpi-sub">DEFECTIVE + QUALITY</div><div class="kpi-ico">🔧</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ TAB: OVERVIEW ═══════════════════════════════ -->
+<section id="tab-overview" class="tab-pane active">
+  <div class="tab-content">
+
+  <div class="g3">
+    <div class="card" style="grid-column:span 2">
+      <div class="ch"><div><div class="ct"><span class="dot" style="background:var(--primary)"></span>退货原因分布</div><div class="cs">按问题类型归因分组，点击图例可筛选</div></div><span class="c-badge cb-r">TOP1 尺码偏大 29%</span></div>
+      <div class="cb" style="display:flex;align-items:center;gap:28px">
+        <div style="width:220px;height:220px;flex-shrink:0"><canvas id="donutChart"></canvas></div>
+        <div id="donutLegend" style="flex:1;display:flex;flex-direction:column;gap:7px"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><div><div class="ct"><span class="dot" style="background:var(--danger)"></span>月度退货趋势</div><div class="cs">2026年1–3月</div></div></div>
+      <div class="cb"><div style="height:200px"><canvas id="trendChart"></canvas></div></div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><div><div class="ct"><span class="dot" style="background:var(--danger)"></span>尺码偏大率（按码段）</div><div class="cs">越大码，偏大比例越高</div></div></div>
+      <div class="cb"><div style="height:180px"><canvas id="sizeRateChart"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="ch"><div><div class="ct"><span class="dot" style="background:#8b5cf6"></span>颜色退货量 + 图文不符率</div><div class="cs">橙线 = NOT_AS_DESCRIBED 率</div></div></div>
+      <div class="cb"><div style="height:180px"><canvas id="colorChart"></canvas></div></div>
+    </div>
+  </div>
+  </div><!-- end tab-content -->
+</section>
+
+<!-- ═══════════════════════════════ TAB: SIZE ═══════════════════════════════ -->
+<section id="tab-size" class="tab-pane">
+  <div class="tab-content">
+  <div class="alert-box danger">
+    <span class="alert-icon">⚠</span>
+    <div><strong>尺码问题并非整体偏大，是两类问题叠加：</strong>
+      <ul class="alert-list">
+        <li><strong>胸围偏宽（31.8%）</strong>：L码以上每码加重，3XL"胸部整体松垮"成第一投诉；建议 L起每码胸围收窄 2–3cm</li>
+        <li><strong>裙长过长（25.9%）</strong>：S/M码最集中，5'6"客户反映拖地；建议 S/M码整体缩短 3–4cm</li>
+        <li><strong>肩宽（XXL+）</strong>：XL开始出现，3XL爆发；放码时肩宽增幅应小于胸围增幅</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="g-full">
+    <div class="card">
+      <div class="ch"><div><div class="ct"><span class="dot" style="background:var(--danger)"></span>偏大问题部位地图</div><div class="cs">基于 612 条客户评论部位关键词识别</div></div><span class="c-badge cb-r">点击部位查看详情</span></div>
+      <div class="cb"><div class="dress-wrap">
+        <!-- SVG DRESS -->
+        <div style="flex-shrink:0">
+          <svg width="240" height="400" viewBox="0 0 240 400" xmlns="http://www.w3.org/2000/svg">
+            <rect width="240" height="400" fill="#f9fafb" rx="10"/>
+            <!-- Dress body -->
+            <path d="M85 58 C75 60,62 66,56 78 L30 126 C26 134,24 144,28 154 L34 170 C37 177,41 181,46 183 L50 370 C50 380,54 386,60 386 L180 386 C186 386,190 380,190 370 L194 183 C199 181,203 177,206 170 L212 154 C216 144,214 134,210 126 L184 78 C177 66,165 60,155 58 Z" fill="#dbeafe" stroke="#93c5fd" stroke-width="1.5"/>
+            <!-- Neckline -->
+            <path d="M85 58 C95 70,110 76,120 76 C130 76,145 70,155 58" fill="#f9fafb" stroke="#93c5fd" stroke-width="1.5"/>
+            <!-- Waist guide -->
+            <line x1="44" y1="188" x2="196" y2="188" stroke="#bfdbfe" stroke-width="1" stroke-dasharray="4,3"/>
+            <!-- Hip guide -->
+            <line x1="48" y1="228" x2="192" y2="228" stroke="#bfdbfe" stroke-width="1" stroke-dasharray="4,3"/>
+            <!-- CHEST overlay -->
+            <ellipse cx="120" cy="126" rx="46" ry="28" fill="rgba(239,68,68,.2)" stroke="#ef4444" stroke-width="2" stroke-dasharray="5,3"/>
+            <text x="120" y="123" text-anchor="middle" font-size="9" font-weight="700" fill="#b91c1c">胸围</text>
+            <text x="120" y="133" text-anchor="middle" font-size="8" fill="#b91c1c">135件·31.8%</text>
+            <!-- LEFT SHOULDER -->
+            <ellipse cx="72" cy="72" rx="18" ry="12" fill="rgba(139,92,246,.2)" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4,3"/>
+            <text x="72" y="70" text-anchor="middle" font-size="8" font-weight="700" fill="#6d28d9">肩</text>
+            <text x="72" y="79" text-anchor="middle" font-size="7" fill="#6d28d9">39件</text>
+            <!-- RIGHT SHOULDER -->
+            <ellipse cx="168" cy="72" rx="18" ry="12" fill="rgba(139,92,246,.2)" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4,3"/>
+            <text x="168" y="70" text-anchor="middle" font-size="8" font-weight="700" fill="#6d28d9">肩</text>
+            <text x="168" y="79" text-anchor="middle" font-size="7" fill="#6d28d9">39件</text>
+            <!-- WAIST -->
+            <ellipse cx="120" cy="186" rx="36" ry="14" fill="rgba(245,158,11,.2)" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,3"/>
+            <text x="120" y="184" text-anchor="middle" font-size="8" font-weight="700" fill="#92400e">腰围</text>
+            <text x="120" y="193" text-anchor="middle" font-size="7" fill="#92400e">33件</text>
+            <!-- HIPS -->
+            <ellipse cx="120" cy="226" rx="42" ry="14" fill="rgba(59,130,246,.12)" stroke="#3b82f6" stroke-width="1" stroke-dasharray="4,3"/>
+            <text x="120" y="224" text-anchor="middle" font-size="8" fill="#1d4ed8">臀围 16件</text>
+            <!-- LENGTH BOX -->
+            <rect x="36" y="298" width="168" height="74" rx="6" fill="rgba(245,158,11,.15)" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5,3"/>
+            <text x="120" y="332" text-anchor="middle" font-size="9" font-weight="700" fill="#92400e">裙长过长</text>
+            <text x="120" y="344" text-anchor="middle" font-size="8" fill="#92400e">110件·25.9%</text>
+            <!-- Legend -->
+            <rect x="6" y="6" width="102" height="46" rx="5" fill="rgba(255,255,255,.9)" stroke="#e5e7eb" stroke-width="1"/>
+            <circle cx="18" cy="20" r="4" fill="#ef4444"/><text x="27" y="24" font-size="9" fill="#374151" font-weight="600">严重问题</text>
+            <circle cx="18" cy="34" r="4" fill="#f59e0b"/><text x="27" y="38" font-size="9" fill="#374151" font-weight="600">中等问题</text>
+            <circle cx="18" cy="48" r="4" fill="#8b5cf6"/><text x="27" y="52" font-size="9" fill="#374151" font-weight="600">轻微问题</text>
+          </svg>
+        </div>
+        <!-- LEGEND PANEL -->
+        <div class="part-legend">
+          <div class="part-item sev3">
+            <div class="p-rank" style="background:#ef4444">1</div>
+            <div class="p-info">
+              <div class="p-name">胸围 Chest / Bust</div>
+              <div class="p-cnt">135件 · L/XL/XXL/3XL 均排第1</div>
+              <div class="p-bar"><div class="p-bar-bg"><div class="p-bar-fill" style="width:100%;background:#ef4444"></div></div><span style="font-size:11px;font-weight:700;color:#ef4444;min-width:32px">31.8%</span></div>
+              <div class="p-action">→ 建议：L起收窄胸围 2–3cm，越大码越激进</div>
+            </div>
+          </div>
+          <div class="part-item sev3">
+            <div class="p-rank" style="background:#ef4444">2</div>
+            <div class="p-info">
+              <div class="p-name">裙长 Dress Length</div>
+              <div class="p-cnt">110件 · S/M码第1投诉，拖地问题</div>
+              <div class="p-bar"><div class="p-bar-bg"><div class="p-bar-fill" style="width:82%;background:#ef4444"></div></div><span style="font-size:11px;font-weight:700;color:#ef4444;min-width:32px">25.9%</span></div>
+              <div class="p-action">→ 建议：S/M整体缩短3–4cm 或推出 Petite 版</div>
+            </div>
+          </div>
+          <div class="part-item sev2">
+            <div class="p-rank" style="background:#f59e0b">3</div>
+            <div class="p-info">
+              <div class="p-name">肩宽 Shoulders</div>
+              <div class="p-cnt">39件 · XXL/3XL 集中爆发</div>
+              <div class="p-bar"><div class="p-bar-bg"><div class="p-bar-fill" style="width:29%;background:#f59e0b"></div></div><span style="font-size:11px;font-weight:700;color:#f59e0b;min-width:32px">9.2%</span></div>
+              <div class="p-action">→ 建议：XXL+肩宽放量控制，不随胸围线性放码</div>
+            </div>
+          </div>
+          <div class="part-item sev2">
+            <div class="p-rank" style="background:#f59e0b">4</div>
+            <div class="p-info">
+              <div class="p-name">腰围 Waist</div>
+              <div class="p-cnt">33件 · 集中 L/XL，常与胸围问题共现</div>
+              <div class="p-bar"><div class="p-bar-bg"><div class="p-bar-fill" style="width:24%;background:#f59e0b"></div></div><span style="font-size:11px;font-weight:700;color:#f59e0b;min-width:32px">7.8%</span></div>
+              <div class="p-action">→ 建议：修胸围时联动收腰，上身整体内收</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><div><div class="ct"><span class="dot" style="background:var(--danger)"></span>尺码 × 部位投诉分布</div><div class="cs">越到大码胸围越主导</div></div></div>
+      <div class="cb"><div style="height:210px"><canvas id="sizeStackChart"></canvas></div>
+        <div class="legend">
+          <div class="leg"><div class="leg-dot" style="background:#ef4444"></div>胸围</div>
+          <div class="leg"><div class="leg-dot" style="background:#f59e0b"></div>裙长</div>
+          <div class="leg"><div class="leg-dot" style="background:#94a3b8"></div>整体</div>
+          <div class="leg"><div class="leg-dot" style="background:#8b5cf6"></div>肩宽</div>
+          <div class="leg"><div class="leg-dot" style="background:#f97316"></div>腰围</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><div><div class="ct"><span class="dot" style="background:var(--warn)"></span>版型修改建议（交工厂参考）</div><div class="cs">基于退货评论推导，需对照实版确认</div></div></div>
+      <div class="cb" style="padding:0">
+        <table class="ms-table">
+          <thead><tr><th>部位</th><th>S</th><th>M</th><th>L</th><th>XL</th><th>XXL</th><th>3XL</th></tr></thead>
+          <tbody>
+            <tr><td><div class="ptag pt-h">P0</div><br><strong>胸围</strong></td>
+              <td><span class="ms-ok">持平</span></td><td><span class="ms-danger">-1cm</span></td><td><span class="ms-danger">-2cm</span></td><td><span class="ms-danger">-2.5cm</span></td><td><span class="ms-danger">-3cm</span></td><td><span class="ms-danger">-3cm</span></td></tr>
+            <tr><td><div class="ptag pt-h">P0</div><br><strong>裙长</strong></td>
+              <td><span class="ms-danger">-4cm</span></td><td><span class="ms-danger">-4cm</span></td><td><span class="ms-danger">-3cm</span></td><td><span class="ms-danger">-2cm</span></td><td><span class="ms-ok">持平</span></td><td><span class="ms-ok">持平</span></td></tr>
+            <tr><td><div class="ptag pt-m">P1</div><br><strong>肩宽</strong></td>
+              <td colspan="3" style="text-align:center;color:var(--gray);font-size:11px">S/M/L 无需改动</td>
+              <td><span class="ms-danger">-0.5cm</span></td><td><span class="ms-danger">-1.5cm</span></td><td><span class="ms-danger">-2cm</span></td></tr>
+            <tr><td><div class="ptag pt-m">P1</div><br><strong>腰围</strong></td>
+              <td colspan="2" style="text-align:center;color:var(--gray);font-size:11px">S/M 无需改动</td>
+              <td><span class="ms-danger">-2cm</span></td><td><span class="ms-danger">-2cm</span></td><td><span class="ms-danger">-1cm</span></td><td><span class="ms-ok">微调</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="g-full">
+    <div class="card">
+      <div class="ch">
+        <div>
+          <div class="ct"><span class="dot" style="background:var(--warn)"></span>尺码 × 问题部位热力矩阵</div>
+          <div class="cs" id="mxSubtitle">全部颜色 · 颜色深度 = 严重程度 · 数字 = 投诉件数</div>
+        </div>
+        <!-- Color filter buttons -->
+        <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end">
+          <button class="color-btn active" data-color="all" onclick="filterMx(this,'all')">全部</button>
+          <button class="color-btn" data-color="Black"  onclick="filterMx(this,'Black')"  style="--cc:#1f2937">● Black</button>
+          <button class="color-btn" data-color="Green"  onclick="filterMx(this,'Green')"  style="--cc:#4d7c0f">● Green</button>
+          <button class="color-btn" data-color="Red"    onclick="filterMx(this,'Red')"    style="--cc:#dc2626">● Red</button>
+          <button class="color-btn" data-color="Purple" onclick="filterMx(this,'Purple')" style="--cc:#7c3aed">● Purple</button>
+          <button class="color-btn" data-color="Navy"   onclick="filterMx(this,'Navy')"   style="--cc:#1e3a5f">● Navy</button>
+          <button class="color-btn" data-color="White"  onclick="filterMx(this,'White')"  style="--cc:#6b7280">● White</button>
+          <button class="color-btn" data-color="Blue"   onclick="filterMx(this,'Blue')"   style="--cc:#2563eb">● Blue</button>
+          <button class="color-btn" data-color="Pink"   onclick="filterMx(this,'Pink')"   style="--cc:#db2777">● Pink</button>
+        </div>
+      </div>
+      <div class="cb">
+        <!-- Sample size warning banner (hidden by default) -->
+        <div id="mxWarning" style="display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#92400e;display:flex;align-items:center;gap:7px">
+          <span>⚠</span><span id="mxWarningText"></span>
+        </div>
+        <div style="overflow-x:auto"><table class="mx-table" id="mxTable"></table></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:8px">
+          <div class="legend">
+            <div class="leg"><div class="leg-dot" style="background:#dbeafe"></div>0–5件</div>
+            <div class="leg"><div class="leg-dot" style="background:#fef08a"></div>6–20件</div>
+            <div class="leg"><div class="leg-dot" style="background:#fca5a5"></div>21–40件</div>
+            <div class="leg"><div class="leg-dot" style="background:#ef4444"></div>40+件</div>
+          </div>
+          <div style="font-size:10px;color:var(--gray);display:flex;align-items:center;gap:6px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:3px;background:repeating-linear-gradient(45deg,#e5e7eb,#e5e7eb 2px,#f9fafb 2px,#f9fafb 5px);border:1px dashed #d1d5db;font-size:9px">⚠</span>
+            样本量不足（&lt;5件），仅供参考
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COLOR × SIZE SECTION -->
+  <p class="sec-title">颜色维度：哪些颜色的尺码问题更严重？</p>
+  <div class="g2">
+    <div class="card">
+      <div class="ch">
+        <div><div class="ct"><span class="dot" style="background:#ef4444"></span>各颜色偏大率对比</div><div class="cs">Navy / White / Blue 系统性偏高，可能是不同批次面料导致</div></div>
+        <span class="c-badge cb-r">Navy 高出均值 +5.5%</span>
+      </div>
+      <div class="cb"><div style="height:200px"><canvas id="colorSizeChart"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="ch">
+        <div><div class="ct"><span class="dot" style="background:var(--warn)"></span>颜色 × 尺码偏大率热力</div><div class="cs">哪个颜色哪个码最需要版型修正</div></div>
+        <span class="c-badge cb-y">White 3XL 达 57%</span>
+      </div>
+      <div class="cb" style="padding:12px 16px">
+        <div id="colorSizeHeatmap"></div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:10px;font-size:10px;color:var(--gray)">
+          <span>偏大率：</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:12px;height:12px;background:#dbeafe;border-radius:2px"></span>&lt;20%</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:12px;height:12px;background:#fef08a;border-radius:2px"></span>20–30%</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:12px;height:12px;background:#fca5a5;border-radius:2px"></span>30–45%</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:12px;height:12px;background:#ef4444;border-radius:2px"></span>45%+</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="alert-box warn" style="margin-bottom:0">
+    <span class="alert-icon">💡</span>
+    <div><strong>颜色差异根因推断：</strong> Navy / White / Blue 偏大率持续高于 Black / Red 约 9 个百分点，同款版型出现颜色系统性偏差，建议排查：① 这三色是否用了不同克重/弹性布料批次；② 染色工艺（深色 vs 浅色）是否导致布料缩率不同；③ 是否出自不同供应商车间</div>
+  </div>
+
+  </div><!-- end tab-content -->
+</section>
+
+<!-- ═══════════════════════════════ TAB: FABRIC ═══════════════════════════════ -->
+<section id="tab-fabric" class="tab-pane">
+  <div class="tab-content">
+  <div class="alert-box warn">
+    <span class="alert-icon">🧵</span>
+    <div><strong>面料问题核心矛盾：客户期望值与实物存在两个方向的偏差</strong>
+      <ul class="alert-list">
+        <li><strong>偏重/不飘逸（13.4%）</strong>：Listing 展示轻盈飘逸，实物厚重下坠——拍摄面料选取误导了买家</li>
+        <li><strong>偏薄/透明（33.7%）</strong>：白色等浅色款透明度严重，客户可见内衣/刺青——需加内衬或换面料</li>
+        <li><strong>廉价感（33.7%）</strong>：触感偏合成/有光泽感，与正式场合定位不匹配——需升级面料或如实展示</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ── Module 1: 面料问题综合分析 (Consolidated) ── -->
+  <div class="g-full" style="margin-bottom:16px">
+    <div class="card">
+      <div class="ch">
+        <div><div class="ct"><span class="dot" style="background:var(--warn)"></span>面料问题综合分析</div><div class="cs">基于评论文本关键词识别（识别率约31%）· 共识别 169 件面料相关退货</div></div>
+        <span class="c-badge cb-r">TOP1 太薄/透明 + 廉价感 并列 58件</span>
+      </div>
+      <div class="cb">
+        <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:20px;align-items:stretch">
+          <!-- 左：Bar chart -->
+          <div>
+            <div style="height:220px"><canvas id="fabricSubChart"></canvas></div>
+            <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+              <div style="font-size:11px;font-weight:700;color:var(--gray);margin-bottom:8px">面料问题来源分布</div>
+              <div style="height:130px"><canvas id="fabricSourceChart"></canvas></div>
+            </div>
+          </div>
+          <!-- 右：Detail table -->
+          <div>
+            <table class="ms-table" style="font-size:12px">
+              <thead><tr><th style="width:30px">#</th><th>问题类型</th><th style="width:50px">件数</th><th style="width:55px">占比</th><th>核心问题</th><th>建议措施</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><span class="p-badge p0">①</span></td>
+                  <td><strong>太薄 / 透明</strong></td>
+                  <td><span class="ms-danger">58</span></td>
+                  <td>34.3%</td>
+                  <td style="font-size:11px;color:var(--gray)">白色最严重：可透视内衣、刺青；浅色系普遍缺少里衬</td>
+                  <td style="font-size:11px;color:var(--ok);font-weight:600">加内衬 / 换不透明面料，白色优先</td>
+                </tr>
+                <tr>
+                  <td><span class="p-badge p0">①</span></td>
+                  <td><strong>廉价感</strong></td>
+                  <td><span class="ms-danger">58</span></td>
+                  <td>34.3%</td>
+                  <td style="font-size:11px;color:var(--gray)">触感合成、化纤感强；正式场合买家期望值高</td>
+                  <td style="font-size:11px;color:var(--ok);font-weight:600">提升克重 / 混纺比，或 Listing 如实标注</td>
+                </tr>
+                <tr>
+                  <td><span class="p-badge p1">③</span></td>
+                  <td><strong>太厚 / 不飘逸</strong></td>
+                  <td>23</td>
+                  <td>13.6%</td>
+                  <td style="font-size:11px;color:var(--gray)">图片飘逸，实物厚重下垂；拍摄用了不同面料或灯光</td>
+                  <td style="font-size:11px;color:var(--ok);font-weight:600">更换飘逸款面料，或修改 Listing 展示</td>
+                </tr>
+                <tr>
+                  <td><span class="p-badge p1">④</span></td>
+                  <td><strong>与图片不符</strong></td>
+                  <td>20</td>
+                  <td>11.8%</td>
+                  <td style="font-size:11px;color:var(--gray)">颜色偏差（紫→洋红）、面料质感出入大</td>
+                  <td style="font-size:11px;color:var(--ok);font-weight:600">重新拍摄或严格校色，紫色/白色优先</td>
+                </tr>
+                <tr>
+                  <td><span class="p-badge p2">⑤</span></td>
+                  <td><strong>合成感 / 弹性大</strong></td>
+                  <td>10</td>
+                  <td>5.9%</td>
+                  <td style="font-size:11px;color:var(--gray)">"感觉像泳衣面料"；弹性过大廓形塌陷</td>
+                  <td style="font-size:11px;color:var(--ok);font-weight:600">检查氨纶含量，控制弹性成分</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Module 2: 客户原声 ── -->
+  <div class="g-full" style="margin-bottom:16px">
+    <div class="card">
+      <div class="ch"><div><div class="ct"><span class="dot" style="background:var(--danger)"></span>客户原声（面料相关）</div><div class="cs">退货评论中典型面料反馈摘录</div></div></div>
+      <div class="cb" style="padding:12px">
+        <div class="quote-grid">
+          <div class="qcard" style="border-top:3px solid #ef4444">
+            <div class="qtag" style="color:#b91c1c">透明 · White</div>
+            <div class="qtext">"Could see tattoos and underwear through the white dress"</div>
+          </div>
+          <div class="qcard" style="border-top:3px solid #f59e0b">
+            <div class="qtag" style="color:#92400e">廉价感</div>
+            <div class="qtext">"Fabric looks and feels cheap — swimsuit material quality"</div>
+          </div>
+          <div class="qcard" style="border-top:3px solid #8b5cf6">
+            <div class="qtag" style="color:#6d28d9">太厚 · 图文不符</div>
+            <div class="qtext">"Looked flowy and light in pictures, material is extremely heavy"</div>
+          </div>
+          <div class="qcard" style="border-top:3px solid #3b82f6">
+            <div class="qtag" style="color:#1d4ed8">颜色偏差 · Purple</div>
+            <div class="qtext">"Image shows dark purple, received dress was more like magenta"</div>
+          </div>
+          <div class="qcard" style="border-top:3px solid #10b981">
+            <div class="qtag" style="color:#065f46">合成感</div>
+            <div class="qtext">"Too stretchy and shiny — not what I expected for a formal event"</div>
+          </div>
+          <div class="qcard" style="border-top:3px solid #f97316">
+            <div class="qtag" style="color:#c2410c">太薄 + 廉价</div>
+            <div class="qtext">"Material thin and exposes undergarments, feels flimsy"</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FABRIC × COLOR HEATMAP -->
+  <div class="g-full">
+    <div class="card">
+      <div class="ch">
+        <div>
+          <div class="ct"><span class="dot" style="background:var(--warn)"></span>面料问题 × 颜色热力矩阵</div>
+          <div class="cs">首列 = 行小计 · 末行 = 列小计 · 颜色深度 = 问题集中程度 · 数字 = 识别件数</div>
+        </div>
+        <span class="c-badge cb-y">White 透明问题占比 43%</span>
+      </div>
+      <div class="cb">
+        <div style="overflow-x:auto"><table class="mx-table" id="fabricMxTable"></table></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:8px">
+          <div class="legend">
+            <div class="leg"><div class="leg-dot" style="background:#dbeafe"></div>1–3件</div>
+            <div class="leg"><div class="leg-dot" style="background:#fef08a"></div>4–9件</div>
+            <div class="leg"><div class="leg-dot" style="background:#fca5a5"></div>10–19件</div>
+            <div class="leg"><div class="leg-dot" style="background:#ef4444"></div>20+件</div>
+          </div>
+          <div style="font-size:11px;color:var(--gray)">基于退货评论关键词识别 · 一条评论可能命中多个问题类型</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COLOR × FABRIC SECTION -->
+  <p class="sec-title">颜色维度：哪些颜色的面料问题最突出？</p>
+  <div class="g-full">
+    <div class="card">
+      <div class="ch">
+        <div><div class="ct"><span class="dot" style="background:var(--warn)"></span>各颜色面料问题画像</div><div class="cs">每个颜色的三类面料问题占比，快速识别高风险色号</div></div>
+        <span class="c-badge cb-r">White 面料问题总计近 30%</span>
+      </div>
+      <div class="cb"><div style="height:220px"><canvas id="colorFabricChart"></canvas></div>
+        <div class="legend" style="margin-top:8px">
+          <div class="leg"><div class="leg-dot" style="background:#8b5cf6"></div>图文不符 NAD%</div>
+          <div class="leg"><div class="leg-dot" style="background:#f59e0b"></div>面料不喜%</div>
+          <div class="leg"><div class="leg-dot" style="background:#ef4444"></div>颜色准确度问题%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="alert-box warn" style="margin-bottom:0">
+      <span class="alert-icon">🪟</span>
+      <div><strong>White 款核心问题：透明度</strong><br>
+      NAD 18.6%（最高）+ 面料不喜 10.9%，共 29.5% 退货与面料相关。White 的面料问题是<strong>颜色专属</strong>，其他颜色的 NAD 主要来自版型，White 的 NAD 主要来自透明、廉价感。需单独处理（加里衬或换面料），不能用统一方案修复。</div>
+    </div>
+    <div class="alert-box danger" style="margin-bottom:0">
+      <span class="alert-icon">🎨</span>
+      <div><strong>Purple 款核心问题：颜色还原度</strong><br>
+      颜色准确度问题占比 4.5%（全款最高），加上 NAD 15.4%，共 ~20% 退货与视觉预期不符。Purple 在不同色温下偏洋红/偏蓝紫差异大，需重新拍摄并在 Listing 中增加"颜色说明：实际偏深紫调"描述。</div>
+    </div>
+  </div>
+
+  </div><!-- end tab-content -->
+</section>
+
+<!-- ═══════════════════════════════ TAB: ACTION ═══════════════════════════════ -->
+<section id="tab-action" class="tab-pane">
+  <div class="tab-content">
+  <div class="g-full">
+    <div class="card">
+      <div class="ch">
+        <div><div class="ct"><span class="dot" style="background:var(--ok)"></span>综合优先行动建议</div><div class="cs">尺码 + 面料 双维度统一排优先级，按可降低退货量排序</div></div>
+        <span class="c-badge cb-g">预计可降低退货 ~45%</span>
+      </div>
+      <div class="cb" style="padding:0">
+        <table class="pr-table">
+          <thead>
+            <tr><th style="width:60px">优先级</th><th style="width:80px">类型</th><th>行动项</th><th style="width:160px">根因</th><th style="width:140px">预计降低退货</th><th style="width:100px">执行难度</th><th style="width:90px">责任方</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="p-badge p0">P0</span></td>
+              <td><span class="category-tag ct-size">尺码</span></td>
+              <td><strong>重制 L/XL/XXL/3XL 胸围版型，逐码收窄 2–3cm</strong><br><span style="font-size:11px;color:var(--gray)">参照 AAFA 标准尺码，以US尺码为基准；同步在 Listing 加"建议参考尺码表"提示</span></td>
+              <td>668件偏大退货中31.8%指向胸部</td>
+              <td><div class="impact-row"><div class="ib"><div class="ib-fill" style="width:90%;background:var(--danger)"></div></div><span style="font-size:11px;font-weight:700;color:var(--danger)">~-500件</span></div></td>
+              <td><span class="effort-dot" style="background:var(--warn)"></span>中（需工厂）</td>
+              <td>产品开发</td>
+            </tr>
+            <tr>
+              <td><span class="p-badge p0">P0</span></td>
+              <td><span class="category-tag ct-size">尺码</span></td>
+              <td><strong>S/M 码裙长统一缩短 3–4cm</strong><br><span style="font-size:11px;color:var(--gray)">或增加 Petite 版；在 listing 明确标注"裙长 X 英寸，适合身高 X–X"</span></td>
+              <td>S/M偏大#1原因是裙长；5'6"客户拖地</td>
+              <td><div class="impact-row"><div class="ib"><div class="ib-fill" style="width:65%;background:var(--danger)"></div></div><span style="font-size:11px;font-weight:700;color:var(--danger)">~-100件</span></div></td>
+              <td><span class="effort-dot" style="background:var(--warn)"></span>中（需工厂）</td>
+              <td>产品开发</td>
+            </tr>
+            <tr>
+              <td><span class="p-badge p0">P0</span></td>
+              <td><span class="category-tag ct-fabric">面料</span></td>
+              <td><strong>White 款增加里衬或替换不透明面料</strong><br><span style="font-size:11px;color:var(--gray)">先做不透明度测试（强光下拍照）；里衬方案成本低、周期短，优先验证</span></td>
+              <td>白色透明问题 NOT_AS_DESCRIBED 率 18.6%</td>
+              <td><div class="impact-row"><div class="ib"><div class="ib-fill" style="width:40%;background:var(--danger)"></div></div><span style="font-size:11px;font-weight:700;color:var(--danger)">~-50件</span></div></td>
+              <td><span class="effort-dot" style="background:var(--ok)"></span>低（加里衬）</td>
+              <td>产品开发</td>
+            </tr>
+            <tr>
+              <td><span class="p-badge p1">P1</span></td>
+              <td><span class="category-tag ct-fabric">面料</span></td>
+              <td><strong>重拍 Purple / White 主图，严格颜色校准</strong><br><span style="font-size:11px;color:var(--gray)">要求拍摄时 Delta-E &lt; 3；紫色系尤其注意色温影响（偏冷=偏蓝紫，偏暖=偏洋红）</span></td>
+              <td>Purple颜色偏差率高；多条评论"收到的是洋红"</td>
+              <td><div class="impact-row"><div class="ib"><div class="ib-fill" style="width:35%;background:var(--warn)"></div></div><span style="font-size:11px;font-weight:700;color:var(--warn)">~-60件</span></div></td>
+              <td><span class="effort-dot" style="background:var(--ok)"></span>低（仅拍摄）</td>
+              <td>运营/摄影</td>
+            </tr>
+            <tr>
+              <td><span class="p-badge p1">P1</span></td>
+              <td><span class="category-tag ct-content">内容</span></td>
+              <td><strong>Listing 增加面料特写 + 克重/成分透明标注</strong><br><span style="font-size:11px;color:var(--gray)">A+内容加入面料近景图、悬垂演示；明确标注"克/㎡、面料成分、厚薄感"；避免期望偏差</span></td>
+              <td>NOT_AS_DESCRIBED 334件，面料感知差异是主因</td>
+              <td><div class="impact-row"><div class="ib"><div class="ib-fill" style="width:55%;background:var(--warn)"></div></div><span style="font-size:11px;font-weight:700;color:var(--warn)">~-120件</span></div></td>
+              <td><span class="effort-dot" style="background:var(--ok)"></span>低（文案）</td>
+              <td>内容运营</td>
+            </tr>
+            <tr>
+              <td><span class="p-badge p1">P1</span></td>
+              <td><span class="category-tag ct-size">尺码</span></td>
+              <td><strong>XXL/3XL 肩宽收窄 1.5–2cm，不随胸围线性放码</strong><br><span style="font-size:11px;color:var(--gray)">大码美国女性胸肩比与小码不同；可参考 Lane Bryant、Torrid 大码版型数据</span></td>
+              <td>3XL 肩宽投诉骤升；XXL+肩部问题排#2</td>
+              <td><div class="impact-row"><div class="ib"><div class="ib-fill" style="width:25%;background:var(--warn)"></div></div><span style="font-size:11px;font-weight:700;color:var(--warn)">~-40件</span></div></td>
+              <td><span class="effort-dot" style="background:var(--warn)"></span>中（工厂）</td>
+              <td>产品开发</td>
+            </tr>
+            <tr>
+              <td><span class="p-badge p2">P2</span></td>
+              <td><span class="category-tag ct-fabric">面料</span></td>
+              <td><strong>主力 SKU 面料升级 A/B 测试（提升克重/降低合成感）</strong><br><span style="font-size:11px;color:var(--gray)">选 Black/Green 2个高销量 SKU 做对比测试，评估成本增量 vs 退货率降幅；3个月周期</span></td>
+              <td>廉价感 + 合成感共68件；影响品牌溢价</td>
+              <td><div class="impact-row"><div class="ib"><div class="ib-fill" style="width:45%;background:var(--primary)"></div></div><span style="font-size:11px;font-weight:700;color:var(--primary)">~-100件</span></div></td>
+              <td><span class="effort-dot" style="background:var(--danger)"></span>高（成本联动）</td>
+              <td>产品+采购</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary cards -->
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><div><div class="ct"><span class="dot" style="background:var(--danger)"></span>P0 行动预期降退货量</div><div class="cs">仅 P0 项，最保守估算</div></div></div>
+      <div class="cb">
+        <div style="height:180px"><canvas id="actionChart"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><div><div class="ct"><span class="dot" style="background:var(--ok)"></span>行动路线图</div><div class="cs">按执行周期排序</div></div></div>
+      <div class="cb" style="padding:12px">
+        <div style="display:flex;flex-direction:column;gap:0">
+          <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px dashed var(--border)">
+            <div style="width:70px;font-size:11px;font-weight:700;color:#b91c1c;flex-shrink:0">本周内</div>
+            <div style="font-size:12px;color:var(--dark)">① 重拍 Purple/White 颜色校正<br>② 更新 Listing 尺码表备注 + 裙长标注</div>
+          </div>
+          <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px dashed var(--border)">
+            <div style="width:70px;font-size:11px;font-weight:700;color:#92400e;flex-shrink:0">2–4 周</div>
+            <div style="font-size:12px;color:var(--dark)">③ White款里衬打样验证<br>④ Listing A+内容增加面料特写及成分说明</div>
+          </div>
+          <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px dashed var(--border)">
+            <div style="width:70px;font-size:11px;font-weight:700;color:#1d4ed8;flex-shrink:0">1–2 月</div>
+            <div style="font-size:12px;color:var(--dark)">⑤ 胸围/裙长/肩宽版型修改打样<br>⑥ 核对 S–3XL 全码尺码表，对标 AAFA 标准</div>
+          </div>
+          <div style="display:flex;gap:12px;padding:10px 0">
+            <div style="width:70px;font-size:11px;font-weight:700;color:var(--ok);flex-shrink:0">3–4 月</div>
+            <div style="font-size:12px;color:var(--dark)">⑦ 新版型上线，监控退货率变化<br>⑧ 面料升级 A/B 测试启动（Black/Green SKU）</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div><!-- end tab-content -->
+</section>
+
+</div><!-- end main -->
+
+<script>
+// ── TAB SWITCHER ──
+// tab → which kpi card ids to activate
+const tabKpiMap={overview:['kpi-overview'],size:['kpi-size'],fabric:['kpi-fabric'],action:[]};
+function navTo(id){
+  // switch pane
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  // update kpi active states
+  document.querySelectorAll('.kpi').forEach(k=>k.classList.remove('kpi-active'));
+  (tabKpiMap[id]||[]).forEach(kid=>{
+    const el=document.getElementById(kid);
+    if(el) el.classList.add('kpi-active');
+  });
+  // init charts lazily
+  if(!chartInited[id]){initCharts(id);chartInited[id]=true;}
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function showTab(id, btn){
+  navTo(id);
+  btn.classList.add('active');
+  if(!chartInited[id]) { initCharts(id); chartInited[id]=true; }
+}
+const chartInited={overview:false,size:false,fabric:false,action:false};
+
+// ── DATA ──
+const total=2271;
+const groups=[
+  {label:'尺码偏大',val:668,color:'#ef4444'},
+  {label:'买家悔意',val:502,color:'#f59e0b'},
+  {label:'图文不符',val:334,color:'#8b5cf6'},
+  {label:'尺码偏小',val:219,color:'#f97316'},
+  {label:'风格不符',val:199,color:'#3b82f6'},
+  {label:'面料不符',val:121,color:'#06b6d4'},
+  {label:'品质问题',val:75,color:'#6b7280'},
+  {label:'其他',val:153,color:'#d1d5db'},
+];
+const sizeOrder=['S','M','L','XL','XXL','3XL'];
+const sizeLabels=['Small','Medium','Large','X-Large','XX-Large','3X-Large'];
+const sizeTotals={S:120,M:584,L:650,XL:561,XXL:282,'3XL':74};
+const sizeTooLarge={S:33,M:133,L:184,XL:174,XXL:108,'3XL':36};
+const sizeTooSmall={S:11,M:63,L:61,XL:55,XXL:25,'3XL':4};
+const mxData={
+  '胸围 Bust':    {S:3,M:17,L:33,XL:44,XXL:27,'3XL':11},
+  '裙长 Length':  {S:10,M:33,L:31,XL:17,XXL:17,'3XL':2},
+  '整体偏大':     {S:4,M:20,L:26,XL:19,XXL:11,'3XL':6},
+  '肩宽 Shoulder':{S:4,M:3,L:5,XL:13,XXL:10,'3XL':4},
+  '腰围 Waist':   {S:4,M:6,L:15,XL:5,XXL:2,'3XL':1},
+};
+
+function heatColor(v){
+  if(v===0) return {bg:'#f3f4f6',text:'#9ca3af'};
+  if(v<=5)  return {bg:'#dbeafe',text:'#1e40af'};
+  if(v<=20) return {bg:'#fef08a',text:'#713f12'};
+  if(v<=40) return {bg:'#fca5a5',text:'#7f1d1d'};
+  return {bg:'#ef4444',text:'white'};
+}
+
+// ── INIT CHARTS ──
+function initCharts(tab){
+  if(tab==='overview') initOverview();
+  if(tab==='size'){initSize();initColorSize();}
+  if(tab==='fabric'){initFabric();initColorFabric();}
+  if(tab==='action') initAction();
+}
+
+function initOverview(){
+  // Donut
+  const dCtx=document.getElementById('donutChart').getContext('2d');
+  new Chart(dCtx,{type:'doughnut',data:{labels:groups.map(g=>g.label),datasets:[{data:groups.map(g=>g.val),backgroundColor:groups.map(g=>g.color),borderWidth:2,borderColor:'#fff',hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:true,cutout:'62%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.label}: ${c.raw}件 (${(c.raw/total*100).toFixed(1)}%)`}}}}});
+  const leg=document.getElementById('donutLegend');
+  groups.forEach(g=>{
+    const pct=(g.val/total*100).toFixed(1);
+    leg.innerHTML+=`<div style="display:flex;align-items:center;gap:7px;padding:2px 0"><div style="width:10px;height:10px;border-radius:2px;background:${g.color};flex-shrink:0"></div><div style="flex:1;font-size:12px">${g.label}</div><div style="font-size:12px;font-weight:700;min-width:28px;text-align:right">${g.val}</div><div style="font-size:11px;color:var(--gray);min-width:36px;text-align:right">${pct}%</div></div>`;
+  });
+  // Trend
+  const tCtx=document.getElementById('trendChart').getContext('2d');
+  new Chart(tCtx,{type:'line',data:{labels:['2026-01','2026-02','2026-03'],datasets:[{label:'总退货',data:[293,1038,940],borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.1)',fill:true,tension:.35,pointRadius:5,pointBackgroundColor:'#2563eb'},{label:'尺码问题',data:[114,415,358],borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.08)',fill:true,tension:.35,pointRadius:5,pointBackgroundColor:'#ef4444'},{label:'面料相关',data:[35,143,142],borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.08)',fill:true,tension:.35,pointRadius:5,pointBackgroundColor:'#f59e0b'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'#f3f4f6'},ticks:{font:{size:11}}}}}});
+  // Size rate
+  const srCtx=document.getElementById('sizeRateChart').getContext('2d');
+  new Chart(srCtx,{type:'bar',data:{labels:sizeOrder,datasets:[{label:'偏大率%',data:sizeOrder.map(s=>Math.round(sizeTooLarge[s]/sizeTotals[s]*100)),backgroundColor:'#ef4444',borderRadius:4,barPercentage:.6},{label:'偏小率%',data:sizeOrder.map(s=>Math.round(sizeTooSmall[s]/sizeTotals[s]*100)),backgroundColor:'#3b82f6',borderRadius:4,barPercentage:.6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'#f3f4f6'},ticks:{font:{size:11},callback:v=>v+'%'},max:60}}}});
+  // Color
+  const cCtx=document.getElementById('colorChart').getContext('2d');
+  const colorLabels=['Black','Green','Red','Purple','Navy','White','Blue','Pink'];
+  const colorTotals=[694,376,364,201,195,156,154,131];
+  const colorNAD=[103,48,55,31,32,29,15,21];
+  const cPal=['#1f2937','#4d7c0f','#dc2626','#7c3aed','#1e3a5f','#e5e7eb','#2563eb','#db2777'];
+  new Chart(cCtx,{data:{labels:colorLabels,datasets:[{type:'bar',label:'退货量',data:colorTotals,backgroundColor:cPal,borderColor:cPal.map(c=>c),borderWidth:1,borderRadius:3,yAxisID:'y'},{type:'line',label:'图文不符率%',data:colorNAD.map((v,i)=>Math.round(v/colorTotals[i]*100)),borderColor:'#f59e0b',backgroundColor:'transparent',pointBackgroundColor:'#f59e0b',pointRadius:4,tension:.3,yAxisID:'y2'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'#f3f4f6'},ticks:{font:{size:11}},position:'left'},y2:{position:'right',grid:{drawOnChartArea:false},ticks:{font:{size:11},callback:v=>v+'%'},max:30}}}});
+}
+
+// ── Color × Size × Part dataset ──
+const colorPartData = {"all":{"Small":{"total":33,"parts":{"Overall":4,"Waist":4,"Length":10,"Chest":3,"Shoulder":4}},"Medium":{"total":133,"parts":{"Overall":20,"Length":33,"Chest":17,"Waist":11,"Shoulder":3}},"Large":{"total":184,"parts":{"Length":30,"Chest":33,"Shoulder":5,"Overall":26,"Waist":19}},"X-Large":{"total":174,"parts":{"Shoulder":13,"Waist":8,"Length":17,"Overall":19,"Chest":44}},"XX-Large":{"total":108,"parts":{"Chest":27,"Overall":11,"Length":17,"Waist":5,"Shoulder":10}},"3X-Large":{"total":36,"parts":{"Shoulder":4,"Overall":6,"Chest":11,"Length":2,"Waist":1}}},"colors":{"Black":{"Small":{"total":7,"identified":6,"parts":{"Waist":1,"Length":3,"Chest":1,"Shoulder":1}},"Medium":{"total":41,"identified":27,"parts":{"Length":13,"Overall":8,"Chest":5,"Waist":2}},"Large":{"total":56,"identified":38,"parts":{"Chest":11,"Length":9,"Overall":10,"Waist":8,"Shoulder":1}},"X-Large":{"total":36,"identified":24,"parts":{"Shoulder":5,"Waist":5,"Chest":8,"Overall":6,"Length":2}},"XX-Large":{"total":28,"identified":18,"parts":{"Length":7,"Overall":1,"Chest":8,"Waist":2,"Shoulder":1}},"3X-Large":{"total":10,"identified":4,"parts":{"Chest":4}}},"Green":{"Small":{"total":10,"identified":8,"parts":{"Chest":2,"Length":4,"Waist":2,"Shoulder":1}},"Medium":{"total":23,"identified":13,"parts":{"Length":8,"Chest":1,"Overall":1,"Waist":3}},"Large":{"total":20,"identified":15,"parts":{"Shoulder":1,"Overall":3,"Chest":7,"Waist":3,"Length":1}},"X-Large":{"total":41,"identified":19,"parts":{"Overall":3,"Shoulder":2,"Waist":2,"Chest":8,"Length":4}},"XX-Large":{"total":16,"identified":12,"parts":{"Chest":4,"Overall":2,"Length":3,"Shoulder":2,"Waist":1}},"3X-Large":{"total":4,"identified":3,"parts":{"Shoulder":2,"Chest":1}}},"Red":{"Small":{"total":6,"identified":4,"parts":{"Overall":1,"Length":2,"Shoulder":1}},"Medium":{"total":20,"identified":12,"parts":{"Overall":3,"Length":5,"Chest":2,"Shoulder":1,"Waist":1}},"Large":{"total":27,"identified":17,"parts":{"Chest":4,"Length":7,"Waist":2,"Shoulder":1,"Overall":4}},"X-Large":{"total":30,"identified":23,"parts":{"Shoulder":4,"Chest":10,"Length":3,"Overall":6}},"XX-Large":{"total":16,"identified":11,"parts":{"Overall":5,"Waist":1,"Chest":3,"Length":1,"Shoulder":1}},"3X-Large":{"total":5,"identified":4,"parts":{"Overall":2,"Chest":2}}},"Purple":{"Small":{"total":2,"identified":2,"parts":{"Overall":1,"Shoulder":1}},"Medium":{"total":7,"identified":4,"parts":{"Chest":2,"Overall":2}},"Large":{"total":15,"identified":6,"parts":{"Overall":3,"Length":2,"Shoulder":1}},"X-Large":{"total":18,"identified":7,"parts":{"Length":1,"Chest":3,"Shoulder":2,"Waist":1}},"XX-Large":{"total":13,"identified":8,"parts":{"Chest":5,"Length":1,"Overall":1,"Shoulder":1,"Waist":1}},"3X-Large":{"total":5,"identified":3,"parts":{"Chest":2,"Overall":1}}},"Navy":{"Small":{"total":2,"identified":1,"parts":{"Length":1}},"Medium":{"total":11,"identified":10,"parts":{"Length":5,"Shoulder":1,"Overall":2,"Waist":1,"Chest":1}},"Large":{"total":21,"identified":10,"parts":{"Chest":5,"Length":3,"Waist":2,"Overall":1}},"X-Large":{"total":14,"identified":9,"parts":{"Chest":6,"Overall":1,"Length":2}},"XX-Large":{"total":17,"identified":8,"parts":{"Shoulder":3,"Length":2,"Chest":3}},"3X-Large":{"total":3,"identified":2,"parts":{"Overall":2}}},"White":{"Small":{"total":2,"identified":2,"parts":{"Waist":1,"Overall":1}},"Medium":{"total":12,"identified":7,"parts":{"Overall":2,"Chest":3,"Length":1,"Waist":1}},"Large":{"total":17,"identified":7,"parts":{"Chest":2,"Overall":3,"Waist":2,"Shoulder":1}},"X-Large":{"total":11,"identified":4,"parts":{"Length":2,"Chest":2}},"XX-Large":{"total":6,"identified":3,"parts":{"Shoulder":1,"Length":1,"Overall":2}},"3X-Large":{"total":4,"identified":3,"parts":{"Overall":1,"Shoulder":1,"Chest":1}}},"Blue":{"Small":{"total":2,"identified":1,"parts":{"Overall":1}},"Medium":{"total":9,"identified":4,"parts":{"Chest":2,"Waist":2}},"Large":{"total":21,"identified":13,"parts":{"Length":6,"Chest":3,"Waist":2,"Overall":2}},"X-Large":{"total":15,"identified":9,"parts":{"Overall":2,"Chest":5,"Length":2}},"XX-Large":{"total":4,"identified":3,"parts":{"Chest":2,"Length":1}},"3X-Large":{"total":2,"identified":2,"parts":{"Shoulder":1,"Length":1}}},"Pink":{"Small":{"total":2,"identified":0,"parts":{}},"Medium":{"total":10,"identified":6,"parts":{"Shoulder":1,"Waist":1,"Overall":2,"Chest":1,"Length":1}},"Large":{"total":7,"identified":3,"parts":{"Chest":1,"Length":2}},"X-Large":{"total":9,"identified":4,"parts":{"Chest":2,"Overall":1,"Length":1}},"XX-Large":{"total":8,"identified":4,"parts":{"Chest":2,"Length":1,"Shoulder":1}},"3X-Large":{"total":3,"identified":3,"parts":{"Length":1,"Chest":1,"Waist":1}}}}};
+const partLabels=['Chest','Length','Overall','Shoulder','Waist'];
+const partCN={'Chest':'胸围 Bust','Length':'裙长 Length','Overall':'整体偏大','Shoulder':'肩宽 Shoulder','Waist':'腰围 Waist'};
+const sizeShort={'Small':'S','Medium':'M','Large':'L','X-Large':'XL','XX-Large':'XXL','3X-Large':'3XL'};
+const allSizes=['Small','Medium','Large','X-Large','XX-Large','3X-Large'];
+
+function buildMxTable(colorKey){
+  const isAll=colorKey==='all';
+  const src=isAll?colorPartData.all:colorPartData.colors[colorKey];
+  const warn=document.getElementById('mxWarning');
+  const warnTxt=document.getElementById('mxWarningText');
+  document.getElementById('mxSubtitle').textContent=isAll
+    ?'全部颜色 · 颜色深度 = 严重程度 · 数字 = 投诉件数'
+    :`${colorKey} 款 · 颜色深度 = 严重程度 · 数字 = 识别件数 / 偏大总件数`;
+  if(!isAll){
+    const sparseCnt=allSizes.filter(s=>(src[s]?.identified||0)<5).length;
+    if(sparseCnt>0){
+      const tot=allSizes.reduce((a,s)=>a+(src[s]?.total||0),0);
+      const ident=allSizes.reduce((a,s)=>a+(src[s]?.identified||0),0);
+      warnTxt.textContent=`${colorKey} 款偏大退货共 ${tot} 件，${ident} 件有部位评论（${Math.round(ident/tot*100)}%）。${sparseCnt}/6 个码段样本量不足（<5件），斜线格仅供方向参考，不建议单独作为打版依据。`;
+      warn.style.display='flex';
+    } else { warn.style.display='none'; }
+  } else { warn.style.display='none'; }
+
+  let html='<thead><tr><th style="text-align:left;width:130px">问题部位</th>';
+  allSizes.forEach(s=>{
+    const tot=isAll?colorPartData.all[s].total:(src[s]?.total||0);
+    html+=`<th>${sizeShort[s]}<br><span style="font-weight:400;font-size:10px;color:var(--gray)">${tot}件</span></th>`;
+  });
+  html+='</tr></thead><tbody>';
+  partLabels.forEach(part=>{
+    html+=`<tr><td class="lbl">${partCN[part]}</td>`;
+    allSizes.forEach(s=>{
+      const v=src[s]?.parts?.[part]||0;
+      const identBase=isAll?Object.values(colorPartData.all[s]?.parts||{}).reduce((a,b)=>a+b,0):(src[s]?.identified||0);
+      const isSparse=!isAll&&(src[s]?.identified||0)<5;
+      const pct=identBase>0&&v>0?Math.round(v/identBase*100)+'%':'';
+      const {bg,text}=heatColor(v);
+      const cls=isSparse?' sparse':'';
+      const tip=isSparse?` title="样本量不足（识别${src[s]?.identified||0}件），仅供参考"`:'';
+      const style=isSparse?'':`background:${bg};color:${text}`;
+      html+=`<td><span class="mx-cell${cls}" style="${style}"${tip}>${v||'—'}${v>0&&pct?`<span class="mx-sub">${pct}</span>`:''}</span></td>`;
+    });
+    html+='</tr>';
+  });
+  html+='</tbody>';
+  document.getElementById('mxTable').innerHTML=html;
+}
+
+window.filterMx=function(btn,colorKey){
+  document.querySelectorAll('.color-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  buildMxTable(colorKey);
+};
+
+function initSize(){
+  const ssCtx=document.getElementById('sizeStackChart').getContext('2d');
+  new Chart(ssCtx,{type:'bar',data:{labels:sizeOrder,datasets:[
+    {label:'胸围',data:[3,17,33,44,27,11],backgroundColor:'#ef4444',borderRadius:2},
+    {label:'裙长',data:[10,33,31,17,17,2],backgroundColor:'#f59e0b',borderRadius:2},
+    {label:'整体',data:[4,20,26,19,11,6],backgroundColor:'#94a3b8',borderRadius:2},
+    {label:'肩宽',data:[4,3,5,13,10,4],backgroundColor:'#8b5cf6',borderRadius:2},
+    {label:'腰围',data:[4,6,15,5,2,1],backgroundColor:'#f97316',borderRadius:2},
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:11}}},y:{stacked:true,grid:{color:'#f3f4f6'},ticks:{font:{size:11}}}}}});
+  buildMxTable('all');
+}
+
+function initFabric(){
+  buildFabricMxTable();
+  // Fabric sub chart
+  const fsCtx=document.getElementById('fabricSubChart').getContext('2d');
+  new Chart(fsCtx,{type:'bar',data:{labels:['太薄/透明','廉价感','太厚/不飘逸','与图片不符','合成感','做工'],datasets:[{data:[58,58,23,20,10,3],backgroundColor:['#ef4444','#f59e0b','#8b5cf6','#3b82f6','#10b981','#6b7280'],borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#f3f4f6'},ticks:{font:{size:11}}},y:{grid:{display:false},ticks:{font:{size:11}}}}}});
+  // Source stacked
+  const fbCtx=document.getElementById('fabricSourceChart').getContext('2d');
+  new Chart(fbCtx,{type:'bar',data:{labels:['NOT_AS_DESCRIBED','DID_NOT_LIKE_FABRIC','APPAREL_STYLE','QUALITY'],datasets:[
+    {label:'太薄',data:[27,23,6,2],backgroundColor:'#ef4444',borderRadius:2},
+    {label:'廉价',data:[22,22,7,7],backgroundColor:'#f59e0b',borderRadius:2},
+    {label:'太厚',data:[13,6,4,0],backgroundColor:'#8b5cf6',borderRadius:2},
+    {label:'图片差异',data:[10,3,5,2],backgroundColor:'#3b82f6',borderRadius:2},
+    {label:'合成',data:[6,3,1,0],backgroundColor:'#10b981',borderRadius:2},
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:8,font:{size:9}}}},scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:9},maxRotation:15}},y:{stacked:true,grid:{color:'#f3f4f6'},ticks:{font:{size:9}}}}}});
+}
+
+function initColorSize(){
+  // ── Color × Too Large Rate bar chart ──
+  const csCtx=document.getElementById('colorSizeChart').getContext('2d');
+  const colorLabels=['Black','Green','Red','Purple','Pink','White','Blue','Navy'];
+  const tooLargeRates=[25.6,30.3,28.6,29.9,29.8,33.3,34.4,34.9];
+  const tooSmallRates=[11.5,9.6,8.8,8.0,3.8,6.4,10.4,12.3];
+  const avgLarge=29.4;
+  new Chart(csCtx,{
+    type:'bar',
+    data:{
+      labels:colorLabels,
+      datasets:[
+        {label:'偏大率%',data:tooLargeRates,backgroundColor:tooLargeRates.map(v=>v>=33?'#ef4444':v>=30?'#f97316':'#fca5a5'),borderRadius:4,barPercentage:.6},
+        {label:'偏小率%',data:tooSmallRates,backgroundColor:'#bfdbfe',borderRadius:4,barPercentage:.6},
+        {type:'line',label:'偏大均值',data:tooLargeRates.map(()=>avgLarge),borderColor:'#6b7280',borderDash:[4,3],pointRadius:0,borderWidth:1.5,tension:0}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}},
+        tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${c.raw}%`}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:11}}},
+              y:{grid:{color:'#f3f4f6'},ticks:{font:{size:11},callback:v=>v+'%'},max:55}}}
+  });
+
+  // ── Color × Size Too Large Rate Heatmap ──
+  const colorData={
+    Black: {S:24.1,M:21.9,L:24.8,XL:22.8,XXL:37.8,'3XL':50.0},
+    Green: {S:52.6,M:25.8,L:17.9,XL:36.3,XXL:45.7,'3XL':50.0},
+    Red:   {S:20.0,M:21.1,L:25.7,XL:34.9,XXL:42.1,'3XL':50.0},
+    Purple:{S:28.6,M:15.2,L:33.3,XL:34.0,XXL:32.5,'3XL':50.0},
+    Navy:  {S:28.6,M:24.4,L:41.2,XL:31.1,XXL:43.6,'3XL':37.5},
+    White: {S:12.5,M:27.9,L:43.6,XL:35.5,XXL:30.0,'3XL':57.1},
+    Blue:  {S:null,M:23.1,L:41.2,XL:33.3,XXL:33.3,'3XL':40.0},
+    Pink:  {S:20.0,M:25.0,L:33.3,XL:30.0,XXL:33.3,'3XL':50.0},
+  };
+  const hmSizes=['S','M','L','XL','XXL','3XL'];
+  const hmColors=['Black','Green','Red','Purple','Navy','White','Blue','Pink'];
+  const colorDots={'Black':'#1f2937','Green':'#4d7c0f','Red':'#dc2626','Purple':'#7c3aed','Navy':'#1e3a5f','White':'#9ca3af','Blue':'#2563eb','Pink':'#db2777'};
+
+  function hmColor(v){
+    if(v===null) return {bg:'#f9fafb',text:'#d1d5db'};
+    if(v<20) return {bg:'#dbeafe',text:'#1e40af'};
+    if(v<30) return {bg:'#fef08a',text:'#713f12'};
+    if(v<45) return {bg:'#fca5a5',text:'#7f1d1d'};
+    return {bg:'#ef4444',text:'white'};
+  }
+
+  let html='<table style="width:100%;border-collapse:collapse;font-size:11px">';
+  html+='<thead><tr><th style="text-align:left;padding:5px 8px;color:var(--gray);font-size:10px;background:#fafafa;border-bottom:2px solid var(--border)">颜色</th>';
+  hmSizes.forEach(s=>{ html+=`<th style="text-align:center;padding:5px 4px;color:var(--gray);font-size:10px;background:#fafafa;border-bottom:2px solid var(--border)">${s}</th>`; });
+  html+='</tr></thead><tbody>';
+  hmColors.forEach(c=>{
+    html+=`<tr><td style="padding:4px 8px;font-weight:600;white-space:nowrap;display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:${colorDots[c]};display:inline-block;border:1px solid #e5e7eb"></span>${c}</td>`;
+    hmSizes.forEach(s=>{
+      const v=colorData[c][s];
+      const {bg,text}=hmColor(v);
+      html+=`<td style="padding:0;border:1px solid #f3f4f6"><div style="padding:7px 4px;text-align:center;background:${bg};color:${text};font-weight:700">${v!==null?v+'%':'—'}</div></td>`;
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  document.getElementById('colorSizeHeatmap').innerHTML=html;
+}
+
+// ── Fabric Issue × Color dataset ──
+const fabricMxData={
+  issues:['太薄/透明','廉价感','太厚/不飘逸','颜色偏差','合成感/弹性'],
+  colors:['Black','Green','Red','Purple','Navy','White','Blue','Pink'],
+  matrix:{
+    '太薄/透明':  {Black:9,Green:2,Red:7,Purple:3,Navy:5,White:25,Blue:2,Pink:5},
+    '廉价感':    {Black:15,Green:6,Red:13,Purple:5,Navy:2,White:3,Blue:2,Pink:4},
+    '太厚/不飘逸':{Black:8,Green:5,Red:1,Purple:2,Navy:1,White:3,Blue:1,Pink:0},
+    '颜色偏差':  {Black:0,Green:1,Red:1,Purple:9,Navy:1,White:0,Blue:2,Pink:1},
+    '合成感/弹性':{Black:2,Green:2,Red:1,Purple:0,Navy:0,White:0,Blue:1,Pink:1}
+  }
+};
+const fabricColorDots={Black:'#1f2937',Green:'#4d7c0f',Red:'#dc2626',Purple:'#7c3aed',Navy:'#1e3a5f',White:'#9ca3af',Blue:'#2563eb',Pink:'#db2777'};
+
+function fabricHeatColor(v){
+  if(v===0) return {bg:'#f3f4f6',text:'#9ca3af'};
+  if(v<=3)  return {bg:'#dbeafe',text:'#1e40af'};
+  if(v<=9)  return {bg:'#fef08a',text:'#713f12'};
+  if(v<=19) return {bg:'#fca5a5',text:'#7f1d1d'};
+  return {bg:'#ef4444',text:'#fff'};
+}
+
+function buildFabricMxTable(){
+  const {issues,colors,matrix}=fabricMxData;
+  const rowTotals={};
+  const colTotals={};
+  issues.forEach(it=>{rowTotals[it]=colors.reduce((a,c)=>a+(matrix[it][c]||0),0);});
+  colors.forEach(c=>{colTotals[c]=issues.reduce((a,it)=>a+(matrix[it][c]||0),0);});
+  const grand=colors.reduce((a,c)=>a+colTotals[c],0);
+
+  let html='<thead><tr>';
+  html+='<th style="text-align:left;width:130px">面料问题类型</th>';
+  html+='<th style="background:#fafafa;border-left:2px solid var(--border);min-width:52px">小计</th>';
+  colors.forEach(c=>{
+    html+=`<th><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${fabricColorDots[c]};margin-right:3px;border:1px solid #e5e7eb;vertical-align:middle"></span>${c}</th>`;
+  });
+  html+='</tr></thead><tbody>';
+
+  issues.forEach(it=>{
+    const rt=rowTotals[it];
+    const {bg:rBg,text:rText}=fabricHeatColor(rt);
+    html+=`<tr><td class="lbl">${it}</td>`;
+    html+=`<td style="border-left:2px solid var(--border);padding:0"><span class="mx-cell" style="background:${rBg};color:${rText};font-weight:800">${rt}</span></td>`;
+    colors.forEach(c=>{
+      const v=matrix[it][c]||0;
+      const pct=rt>0?Math.round(v/rt*100):0;
+      const {bg,text}=fabricHeatColor(v);
+      html+=`<td><span class="mx-cell" style="background:${bg};color:${text}">${v||'—'}${v>0?`<span class="mx-sub">${pct}%</span>`:''}</span></td>`;
+    });
+    html+='</tr>';
+  });
+
+  // column totals row
+  const {bg:gtBg,text:gtText}=fabricHeatColor(grand);
+  html+='<tr style="border-top:2px solid var(--border)">';
+  html+='<td class="lbl" style="font-weight:800;color:var(--dark)">列小计</td>';
+  html+=`<td style="border-left:2px solid var(--border);padding:0"><span class="mx-cell" style="background:${gtBg};color:${gtText};font-weight:800">${grand}</span></td>`;
+  colors.forEach(c=>{
+    const v=colTotals[c];
+    const pct=grand>0?Math.round(v/grand*100):0;
+    const {bg,text}=fabricHeatColor(v);
+    html+=`<td><span class="mx-cell" style="background:${bg};color:${text};font-weight:800">${v}<span class="mx-sub">${pct}%</span></span></td>`;
+  });
+  html+='</tr></tbody>';
+  document.getElementById('fabricMxTable').innerHTML=html;
+}
+
+function initColorFabric(){
+  const cfCtx=document.getElementById('colorFabricChart').getContext('2d');
+  const colorLabels=['Black','Green','Red','Purple','Navy','White','Blue','Pink'];
+  const nadPct  =[14.8,12.8,15.1,15.4,16.4,18.6, 9.7,16.0];
+  const fabPct  =[ 4.3, 4.8, 6.9, 4.5, 2.6,10.9, 4.5, 7.6];
+  const colorPct=[ 0.4, 1.3, 0.8, 4.5, 1.5, 0.6, 1.3, 3.1];
+  const cBg=['#1f2937','#4d7c0f','#dc2626','#7c3aed','#1e3a5f','#9ca3af','#2563eb','#db2777'];
+  new Chart(cfCtx,{
+    type:'bar',
+    data:{
+      labels:colorLabels,
+      datasets:[
+        {label:'图文不符 NAD%',data:nadPct,backgroundColor:'#c4b5fd',borderRadius:2,stack:'a'},
+        {label:'面料不喜%',data:fabPct,backgroundColor:'#fde68a',borderRadius:2,stack:'a'},
+        {label:'颜色准确度问题%',data:colorPct,backgroundColor:'#fca5a5',borderRadius:2,stack:'a'},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}},
+        annotation:{annotations:{line1:{type:'line',yMin:14.1,yMax:14.1,borderColor:'#6b7280',borderWidth:1,borderDash:[4,3]}}}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:11}}},
+        y:{stacked:true,grid:{color:'#f3f4f6'},ticks:{font:{size:11},callback:v=>v+'%'},max:35}
+      }
+    }
+  });
+}
+
+function initAction(){
+  const aCtx=document.getElementById('actionChart').getContext('2d');
+  new Chart(aCtx,{type:'bar',data:{labels:['胸围版型修改','裙长缩短','White里衬','面料说明优化'],datasets:[{label:'预计降低退货件数',data:[500,100,50,120],backgroundColor:['#ef4444','#ef4444','#f59e0b','#f59e0b'],borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` 预计降低 ${c.raw} 件`}}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'#f3f4f6'},ticks:{font:{size:11}}}}}});
+}
+
+// Modal Logic
+function showDoc() {
+  document.getElementById('docOverlay').style.display = 'block';
+  document.getElementById('docModal').style.display = 'flex';
+  setTimeout(() => {
+    document.getElementById('docOverlay').classList.add('show');
+    document.getElementById('docModal').classList.add('show');
+  }, 10);
+}
+function hideDoc() {
+  document.getElementById('docOverlay').classList.remove('show');
+  document.getElementById('docModal').classList.remove('show');
+  setTimeout(() => {
+    document.getElementById('docOverlay').style.display = 'none';
+    document.getElementById('docModal').style.display = 'none';
+  }, 300);
+}
+
+// Init first tab on load
+initCharts('overview'); chartInited['overview']=true;
+</script>
+
+<!-- Floating Button -->
+<button class="doc-btn" onclick="showDoc()">
+  <span style="font-size:16px">📄</span> 需求文档
+</button>
+
+<!-- Modal Overlay -->
+<div class="doc-overlay" id="docOverlay" onclick="hideDoc()"></div>
+
+<!-- Modal Content -->
+<div class="doc-modal" id="docModal">
+  <div class="doc-header">
+    <h2 class="doc-title"><span>📘</span> 《退货深度分析看板》研发需求说明书</h2>
+    <button class="doc-close" onclick="hideDoc()">×</button>
+  </div>
+  <div class="doc-content">
+    <h3>一、 需求前提</h3>
+    <ul>
+      <li>1.退款原因或评论内容有如下关键词就归类到对应分类，关键词后台存配置，方便修改（<a href="https://luoxiaozhi.feishu.cn/sheets/IlYYsSm5xh4smLtqGOrcR1OLnCe?from=from_copylink" target="_blank" style="color:var(--primary);text-decoration:underline;font-weight:600;">点击查看关键词参考表</a>）</li>
+      <li>2.除了涉及AI建议的功能，采取直接统计存储的方式而不接入大模型，需要AI建议的部分异步处理，让用户先能看到数据库统计的部分</li>
+    </ul>
+
+    <h3>二、 核心功能定位</h3>
+    <p>通过对退货原因的多维度深入拆解（如尺码、颜色、面料、部位等），深入的给供应链部门提供优化的参考数据和决策依据</p>
+
+    <h3>三、 页面交互与模块说明</h3>
+    
+    <h4>3.1 顶部全局控制区</h4>
+    <ul>
+      <li><strong>显示逻辑</strong>：常驻悬浮于页面顶部，展示当前分析的商品SKU及基本规格属性。</li>
+      <li><strong>交互规则</strong>：
+        <ul>
+          <li><strong>筛选条件</strong>：用户可自由选择月份区间和多国站点进行数据过滤。</li>
+          <li><strong>数据刷新</strong>：用户调整条件后，须点击“查询”按钮方可刷新全局数据，避免条件频繁变动时引起页面卡顿。</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h4>3.2 核心指标导航区</h4>
+    <ul>
+      <li><strong>显示逻辑</strong>：常驻页面顶部下方（向下滚动时自动吸附在顶部），平铺展示 5 个维度的核心指标。</li>
+      <li><strong>交互规则</strong>：
+        <ul>
+          <li><strong>详情下钻</strong>：前 3 个卡片（总退货量、尺码、面料）支持点击交互。鼠标悬停时应有明显的视觉反馈（如放大、高亮边框等）。点击对应卡片后，页面主体将切换至该指标维度的深入诊断内容。</li>
+          <li><strong>静态指标展示</strong>：后 2 个卡片（图文不符、品质问题）仅作全局宏观数据展示，不提供深层的下钻分析功能，因此不作点击交互处理。</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h4>3.3 数据下钻分析模块</h4>
+    
+    <p><strong>(1) 退货总览页</strong></p>
+    <ul>
+      <li><strong>显示逻辑</strong>：进入看板或点击“总退货量”卡片后默认展示。</li>
+      <li><strong>核心业务诉求</strong>：
+        <ul>
+          <li><strong>退货趋势预警</strong>：以折线结合柱状图的形式，同时呈现退货率和绝对退货件数的历史走势，辅助业务直观判断退货问题是否正在恶化。</li>
+          <li><strong>问题变体排行</strong>：表格列表展示问题最严重的子变体（如特定颜色或尺码），支持用户按退货绝对件数或退货率高低自由排序。</li>
+        </ul>
+      </li>
+    </ul>
+
+    <p><strong>(2) 尺码问题诊断页</strong></p>
+    <ul>
+      <li><strong>显示逻辑</strong>：点击“尺码问题”卡片后展示。重点解决商品版型设计是否存在偏差的问题。</li>
+      <li><strong>核心业务诉求</strong>：
+        <ul>
+          <li><strong>偏大/偏小趋势拆解</strong>：通过双折线将“偏大”和“偏小”的走势分离，让用户一眼看出整体版型是偏大、偏小、还是两极分化严重。</li>
+          <li><strong>颜色×尺码交叉分析</strong>：通过热力颜色深浅直观暴露异常。提供“仅看偏大”或“仅看偏小”的筛选按钮，以此快速锁定特定颜色或尺码组合的异常（例如：白色的3XL严重偏大）。</li>
+        </ul>
+      </li>
+    </ul>
+
+    <p><strong>(3) 面料与风格诊断页</strong></p>
+    <ul>
+      <li><strong>显示逻辑</strong>：点击“面料/风格”卡片后展示。重点处理因主观感知差异导致的退货。</li>
+      <li><strong>核心业务诉求</strong>：
+        <ul>
+          <li><strong>面料问题综合诊断</strong>：通过直观的数据排布，直接将散乱的反馈转化为清晰的结论清单，并指出优先级与行动建议（例如：加内衬、提升克重）。</li>
+          <li><strong>客户原声展示 (VOC)</strong>：以卡片流的形式展示真实的买家评论及痛点标签，为数据分析结论提供真实的客观印证。</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h3>四、 视觉与展示规范</h3>
+    <ul>
+      <li><strong>结论导向</strong>：为降低业务人员的理解成本，对于所有复杂的数据图表，必须提炼并计算出核心结论，在图表上方或醒目位置直接以结论标签展示（例如：直接标明“TOP1 偏大：White 3XL”）。</li>
+      <li><strong>色彩视觉规范</strong>：系统内的色彩需传达统一的业务含义，禁止随机配色。原则上应使用红色代表严重问题或偏大，蓝色代表常规或偏小，橙色/绿色分别与面料、品质等业务分类强绑定。</li>
+    </ul>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,5 +1,14 @@
 {
+  "framework": null,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "redirects": [
+    { "source": "/refund", "destination": "/refund/", "permanent": true },
+    { "source": "/refund/deep", "destination": "/refund/deep/", "permanent": true },
+    { "source": "/selection", "destination": "/selection/", "permanent": true }
+  ],
   "rewrites": [
+    { "source": "/sso/callback", "destination": "/refund/legacy.html" },
     { "source": "/api/v1/:path*", "destination": "http://refund.xjcerp.com/api/v1/:path*" },
     { "source": "/api/:path*", "destination": "http://video.xjcerp.com/api/:path*" }
   ]

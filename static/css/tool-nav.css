@@ -1,0 +1,30 @@
+.xinj-tool-nav { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px max(24px, calc((100vw - 1440px) / 2)); background: #fff; border-bottom: 1px solid #e2e8f0; font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; position: relative; z-index: 50; }
+.xinj-tool-nav a { color: #64748b; text-decoration: none; font-size: 14px; white-space: nowrap; }
+.xinj-tool-nav > a { color: #0f172a; font-weight: 700; }
+.xinj-tool-nav div { display: flex; flex-wrap: wrap; gap: 8px; }
+.xinj-tool-nav div a { padding: 8px 14px; border-radius: 9px; }
+.xinj-tool-nav div a[aria-current='page'] { color: #2563eb; background: #eff6ff; font-weight: 600; }
+.xinj-tool-nav small { color: #94a3b8; font-size: 12px; }
+@media (max-width: 640px) { .xinj-tool-nav { padding: 12px 16px; gap: 10px; flex-wrap: wrap; } .xinj-tool-nav small { width: 100%; } }
+.refund-overview .layout { height: calc(100dvh - var(--tool-nav-height, 72px)); }
+.refund-deep .xinj-tool-nav { position: fixed; inset: 0 0 auto; z-index: 150; }
+.refund-deep .topbar { top: var(--tool-nav-height, 72px); }
+.refund-deep .sidebar { top: calc(var(--tool-nav-height, 72px) + var(--topbar)); }
+.refund-deep .main { margin-top: calc(var(--tool-nav-height, 72px) + var(--topbar)); }
+.refund-deep .kpi-nav { top: calc(var(--tool-nav-height, 72px) + var(--topbar)); }
+.refund-overview .filter-group, .refund-overview .radio-group { flex-wrap: wrap; }
+.refund-overview .radio-label, .refund-overview .select-group > label { white-space: nowrap; }
+.refund-overview .top-header { gap: 16px; }
+.refund-overview .metric-icon { flex-shrink: 0; }
+@media (max-width: 1180px) {
+  .refund-overview .action-group { display: none; }
+  .refund-overview .dashboard-grid > .row, .refund-overview .col-8 > .row { flex-wrap: wrap; }
+  .refund-overview .col-4, .refund-overview .col-8 { flex: 1 1 100%; width: 100%; }
+  .refund-overview .metric-card { min-width: 190px; }
+}
+@media (max-width: 720px) {
+  .refund-overview .col-6 { flex: 1 1 100%; width: 100%; }
+  .refund-overview .dashboard-grid > .row { flex-direction: column; }
+  .refund-overview .top-header { margin: 16px; padding: 16px; }
+  .refund-overview .dashboard-grid { padding: 0 16px 16px; }
+}

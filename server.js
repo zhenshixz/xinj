@@ -2,6 +2,7 @@ const http = require('http');
 const httpProxy = require('http-proxy');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
 // Create proxy for video.xjcerp.com (main site API)
 const videoProxy = httpProxy.createProxyServer({ target: 'http://video.xjcerp.com', changeOrigin: true });
@@ -52,15 +53,21 @@ const server = http.createServer((req, res) => {
     const urlPath = req.url.split('?')[0];
     const fullUrl = req.url;
 
+    if (urlPath === '/healthz') {
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        res.end(JSON.stringify({ service: 'xinj-local', status: 'ok' }));
+        return;
+    }
+
     // --- SSO CALLBACK ---
     // Serve refund SPA for /sso/callback so the Vue app processes the OTT.
     // We serve a modified version that uses absolute paths to /refund/dist/
     if (urlPath === '/sso/callback') {
         console.log(`[SSO CALLBACK] ${req.method} ${fullUrl}`);
         // Read refund/index.html and fix relative paths to absolute
-        const htmlPath = path.join(__dirname, 'refund', 'index.html');
+        const htmlPath = path.join(__dirname, 'refund', 'legacy.html');
         fs.readFile(htmlPath, 'utf8', (err, html) => {
-            if (err) { res.writeHead(500); res.end('Error reading refund/index.html'); return; }
+            if (err) { res.writeHead(500); res.end('Error reading refund/legacy.html'); return; }
             // Fix relative paths: ./dist/ -> /refund/dist/
             html = html.replace(/\.\/dist\//g, '/refund/dist/');
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
@@ -83,25 +90,50 @@ const server = http.createServer((req, res) => {
 
     // --- STATIC FILES ---
     let filePath = urlPath;
+    if (['/refund', '/refund/deep', '/selection'].includes(filePath)) {
+        res.writeHead(308, { Location: filePath + '/' + (req.url.includes('?') ? '?' + req.url.split('?').slice(1).join('?') : '') });
+        res.end(); return;
+    }
     if (filePath === '/') filePath = '/index.html';
     if (filePath.endsWith('/')) filePath += 'index.html';
 
+    // Only publish application files, not repository metadata or dependencies.
+    if (!(filePath === '/index.html' || /^\/(pages|static|refund|selection)\//.test(filePath)) || filePath.includes('..') || filePath.includes('\\')) {
+        res.writeHead(404); res.end('Not Found'); return;
+    }
     const absPath = path.join(__dirname, filePath);
     serveFile(absPath, res);
 });
 
-const PORT = 8899;
-server.listen(PORT, () => {
+const PORT = Number(process.env.PORT || 8899);
+if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
+    console.error('[ERROR] PORT must be an integer between 1 and 65535.');
+    process.exit(1);
+}
+server.on('error', (err) => {
+    console.error(err.code === 'EADDRINUSE'
+        ? `[ERROR] Port ${PORT} is already in use. Close the existing service or set PORT to another value.`
+        : `[ERROR] ${err.message}`);
+    process.exit(1);
+});
+server.listen(PORT, '0.0.0.0', () => {
     console.log('');
     console.log('==============================================');
     console.log(` 星骏AI工具箱 - 本地开发服务器`);
     console.log(` http://127.0.0.1:${PORT}/`);
+    for (const addresses of Object.values(os.networkInterfaces())) {
+        for (const address of addresses || []) {
+            if (address.family === 'IPv4' && !address.internal) {
+                console.log(` LAN: http://${address.address}:${PORT}/`);
+            }
+        }
+    }
     console.log('');
     console.log(' API代理:');
     console.log('   /api/*        -> video.xjcerp.com');
     console.log('   /api/v1/*     -> refund.xjcerp.com');
     console.log(' SSO回调:');
-    console.log('   /sso/callback -> refund/index.html (SPA)');
+    console.log('   /sso/callback -> refund/legacy.html (legacy SPA)');
     console.log('==============================================');
     console.log('');
 });
